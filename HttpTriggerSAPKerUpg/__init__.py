@@ -32,10 +32,10 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     name = _stdout.read().decode()
     client.close()
 
-    if name:
-        return func.HttpResponse(f"Hello, {name}. This HTTP triggered function executed successfully.")
-    else:
-        return func.HttpResponse(
-             "This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response.",
-             status_code=200
-        )
+#    if name:
+#        return func.HttpResponse(f"Hello, {name}. This HTTP triggered function executed successfully.")
+#    else:
+    return func.HttpResponse(
+        f" {name} This HTTP triggered function executed successfully",
+        status_code=200
+    )
