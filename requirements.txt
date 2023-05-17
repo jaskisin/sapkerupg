@@ -8,5 +8,5 @@ azure-storage-blob
 httplib2
 logging
 requests
-suds-client
+suds
 urllib-parse
