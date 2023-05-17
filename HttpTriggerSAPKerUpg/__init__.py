@@ -27,7 +27,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     client = paramiko.client.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     client.connect(host, username=username, password=password)
-    _stdin, _stdout,_stderr = client.exec_command("df")
+    _stdin, _stdout,_stderr = client.exec_command("touch abc")
     print(_stdout.read().decode())
     name = _stdout.read().decode()
     client.close()
