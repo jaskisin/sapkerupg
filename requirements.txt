@@ -9,4 +9,4 @@ httplib2
 logging
 requests
 suds
-urllib-parse
+urllib
