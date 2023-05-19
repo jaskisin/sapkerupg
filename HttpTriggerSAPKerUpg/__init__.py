@@ -120,18 +120,18 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         sftp.close()
         client.close()
     
-    def run_remote_command(host, loginid, loginpass, command):
-        client = paramiko.client.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(host, username=loginid, password=loginpass)
-        stdin, stdout, stderr = client.exec_command(command)
-        return stdout.read().decode()
+#    def run_remote_command(host, loginid, loginpass, command):
+#        client = paramiko.client.SSHClient()
+#        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+#        client.connect(host, username=loginid, password=loginpass)
+#        stdin, stdout, stderr = client.exec_command(command)
+#        return stdout.read().decode()
     
     logging.info('Downloading the file from remote.')
     download_file_from_remote(host, osuser, ospass, "/usr/sap/sapservices", "/tmp/sapservices")
     
-    download_blob_to_file(blob_service_client, container, sapexefile)
-    download_blob_to_file(blob_service_client, container, sapcarfile)
+#    download_blob_to_file(blob_service_client, container, sapexefile)
+#    download_blob_to_file(blob_service_client, container, sapcarfile)
     
 #    upload_file_to_remote(host, osuser, ospass, "/tmp/"+sapexefile, "/tmp/"+sapexefile)
 #    upload_file_to_remote(host, osuser, ospass, "/tmp/"+sapcarfile, "/tmp/"+sapcarfile)
@@ -159,9 +159,6 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
 #            sysnr = line.split("/")[4][-2:]
 #            sap_operation(host, sysnr, osuser, ospass, "startservice")
 #            sap_operation(host, sysnr, osuser, ospass, "start")
-    
-            
-            
     
     return func.HttpResponse(
         f" {Lines} This HTTP triggered function executed successfully",
