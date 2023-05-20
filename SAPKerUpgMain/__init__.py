@@ -65,12 +65,12 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     stdin, stdout, stderr = remote_command_client.exec_command("chmod 777 /tmp/"+sapcarfile+" /tmp/"+sapexefile)
     stdin, stdout, stderr = remote_command_client.exec_command("/tmp/"+sapcarfile+" -xvf /tmp/"+sapexefile+" -R /sapmnt/"+sid+"/exe/uc/linuxx86_64")
     remote_command_client.close()
-    stdoutput = stdout.read()
-    stdinput = stdin.read()
-    stderror = stderr.read()
-    logging.info('Output: %s', stdoutput)
-    logging.info('Input: %s', stdinput)
-    logging.info('Error: %s', stderror)
+    output = stdout.read()
+    input = stdin.read()
+    error = stderr.read()
+    logging.info('Output: %s', output)
+    logging.info('Input: %s', input)
+    logging.info('Error: %s', error)
     
     #output = run_remote_command(host, osuser, ospass, "chmod 777 /tmp/"+sapcarfile+" /tmp/"+sapexefile+";/tmp/"+sapcarfile+" -xvf /tmp/"+sapexefile+" -R /sapmnt/"+sid+"/exe/uc/linuxx86_64")
     
