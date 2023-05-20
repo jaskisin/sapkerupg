@@ -61,7 +61,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     
     remote_command_client = paramiko.client.SSHClient()
     remote_command_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    remote_command_client.connect(host, username=osuser, password=ospass)
+    remote_command_client.connect(host, username="root", password=ospass)
     stdin, stdout, stderr = remote_command_client.exec_command("chmod 777 /tmp/"+sapcarfile+" /tmp/"+sapexefile)
     stdin, stdout, stderr = remote_command_client.exec_command("/tmp/"+sapcarfile+" -xvf /tmp/"+sapexefile+" -R /sapmnt/"+sid+"/exe/uc/linuxx86_64")
     remote_command_client.close()
