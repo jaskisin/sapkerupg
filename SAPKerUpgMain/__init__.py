@@ -73,5 +73,5 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     #output = run_remote_command(host, osuser, ospass, "chmod 777 /tmp/"+sapcarfile+" /tmp/"+sapexefile+";/tmp/"+sapcarfile+" -xvf /tmp/"+sapexefile+" -R /sapmnt/"+sid+"/exe/uc/linuxx86_64")
     
     return func.HttpResponse(
-        f"{output}",
+        "OK",
         status_code=200    )
