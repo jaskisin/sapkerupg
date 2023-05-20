@@ -41,6 +41,8 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         finally:
             remotecommandclient.close()
     
+    download_file_from_remote(host, osuser, ospass, "/usr/sap/sapservices", "/tmp/sapservices")
+    
     logging.info('Reading the file.')
     file1 = open('/tmp/sapservices', 'r')
     Lines = file1.readlines()
@@ -53,5 +55,5 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     #output = run_remote_command(host, osuser, ospass, "chmod 777 /tmp/"+sapcarfile+" /tmp/"+sapexefile+";/tmp/"+sapcarfile+" -xvf /tmp/"+sapexefile+" -R /sapmnt/"+sid+"/exe/uc/linuxx86_64")
     
     return func.HttpResponse(
-        f"{output}",
+        f"{sid}",
         status_code=200    )
