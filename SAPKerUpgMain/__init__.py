@@ -64,7 +64,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     remote_command_client.connect(host, username=osuser, password=ospass)
     stdin, stdout, stderr = remote_command_client.exec_command("chmod 777 /tmp/"+sapcarfile+" /tmp/"+sapexefile+";/tmp/"+sapcarfile+" -xvf /tmp/"+sapexefile+" -R /sapmnt/"+sid+"/exe/uc/linuxx86_64")
     remote_command_client.close()
-    output = str(stdout.read())
+    output = stdout.read()
     
     #output = run_remote_command(host, osuser, ospass, "chmod 777 /tmp/"+sapcarfile+" /tmp/"+sapexefile+";/tmp/"+sapcarfile+" -xvf /tmp/"+sapexefile+" -R /sapmnt/"+sid+"/exe/uc/linuxx86_64")
     
