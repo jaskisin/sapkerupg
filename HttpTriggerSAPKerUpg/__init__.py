@@ -10,6 +10,8 @@ import requests
 
 import httplib2
 
+import sapkerupg
+
 from suds.client import Client
 
 from urllib.parse import urlparse
@@ -81,21 +83,6 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
 #    filename = "S4HANA_2021_ISS_v0001ms.yaml"
 # Create the BlobServiceClient object
     blob_service_client = BlobServiceClient(accounturl,sascred)
-    
-    def download_file_from_remote(host, loginid, loginpass, remotefile, localpath):
-        port = 22
-        transport = paramiko.Transport((host, port))
-        transport.connect(username = loginid, password = loginpass)
-        sftp = paramiko.SFTPClient.from_transport(transport)
-        sftp.get(remotefile, localpath)
-        sftp.close()
-        transport.close()
-
-    def download_blob_to_file(self, blob_service_client: BlobServiceClient, container_name, storagefilename):
-        blob_client = blob_service_client.get_blob_client(container=container_name, blob=storagefilename)
-        with open(file=os.path.join(filepath, storagefilename), mode="wb") as sample_blob:
-            download_stream = blob_client.download_blob()
-            sample_blob.write(download_stream.readall())
             
 #    def sap_operation(host,instancenumber, osuser, ospass, operation):
 #        url = "http://"+host+":5"+instancenumber+"13?wsdl"
@@ -111,30 +98,14 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
 #            result = client.service.StartService("TS3")    
 #        return result
     
-    def upload_file_to_remote(host, loginid, loginpass, remotepath, localpath):
-        client = paramiko.client.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(host, username=loginid, password=loginpass)
-        sftp = client.open_sftp()
-        sftp.put(localpath, remotepath)
-        sftp.close()
-        client.close()
-    
-#    def run_remote_command(host, loginid, loginpass, command):
-#        client = paramiko.client.SSHClient()
-#        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-#        client.connect(host, username=loginid, password=loginpass)
-#        stdin, stdout, stderr = client.exec_command(command)
-#        return stdout.read().decode()
-    
     logging.info('Downloading the file from remote.')
-    download_file_from_remote(host, osuser, ospass, "/usr/sap/sapservices", "/tmp/sapservices")
+    sapkerupg.download_file_from_remote(host, osuser, ospass, "/usr/sap/sapservices", "/tmp/sapservices")
     
-#    download_blob_to_file(blob_service_client, container, sapexefile)
-#    download_blob_to_file(blob_service_client, container, sapcarfile)
+    sapkerupg.download_blob_to_file(any,blob_service_client, container, sapexefile)
+    sapkerupg.download_blob_to_file(any,blob_service_client, container, sapcarfile)
     
-#    upload_file_to_remote(host, osuser, ospass, "/tmp/"+sapexefile, "/tmp/"+sapexefile)
-#    upload_file_to_remote(host, osuser, ospass, "/tmp/"+sapcarfile, "/tmp/"+sapcarfile)
+    sapkerupg.upload_file_to_remote(host, osuser, ospass, "/tmp/"+sapexefile, "/tmp/"+sapexefile)
+    sapkerupg.upload_file_to_remote(host, osuser, ospass, "/tmp/"+sapcarfile, "/tmp/"+sapcarfile)
     
     
     logging.info('Reading the file.')
@@ -142,12 +113,18 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     Lines = file1.readlines()
     
     for line in Lines:
-        if "ASCS" in line:
-            sysnr = line.split("/")[4][-2:]
+        if osuser in line:
+            if "ASCS" in line:
+                ascssysnr = line.split("/")[4][-2:]
+            else:
+                diasysnr = line.split("/")[4][-2:]    
+         
 #            sap_operation(host, sysnr, osuser, ospass, "stop")
 #            sap_operation(host, sysnr, osuser, ospass, "stopservice")
-#    run_remote_command(host, osuser, ospass, "sapcontrol -nr "+sysnr+" -function StopSystem")
-#    run_remote_command(host, osuser, ospass, "sapcontrol -nr "+sysnr+" -function StopService")
+    sapkerupg.run_remote_command(host, osuser, ospass, "sapcontrol -nr "+diasysnr+" -function StopWait 300 0")
+    sapkerupg.run_remote_command(host, osuser, ospass, "sapcontrol -nr "+ascssysnr+" -function StopWait 300 0")
+    sapkerupg.run_remote_command(host, osuser, ospass, "sapcontrol -nr "+ascssysnr+" -function StopService")
+    sapkerupg.run_remote_command(host, osuser, ospass, "sapcontrol -nr "+diasysnr+" -function StopService")
             
 #    run_remote_command(host, osuser, ospass, "cd /usr/sap/TS3/SYS/exe/uc/linuxx86_64; /tmp/"+sapcarfile+" -xvf "+sapexefile)        
 #    run_remote_command(host, osuser, ospass, "/usr/sap/TS3/SYS/exe/uc/linuxx86_64/sapcpe pf=/sapmnt/TS3/profile/TS3_D02_ts3vm")        
@@ -161,6 +138,6 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
 #            sap_operation(host, sysnr, osuser, ospass, "start")
     
     return func.HttpResponse(
-        f" {Lines} This HTTP triggered function executed successfully",
+        f" {sysnr} This HTTP triggered function executed successfully",
         status_code=200
     )
