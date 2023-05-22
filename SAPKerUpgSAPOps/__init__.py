@@ -37,10 +37,16 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         stdin, stdout, stderr = remotecommandclient.exec_command(command)
         returncode = stdout.channel.recv_exit_status()
         outlines = stdout.readlines()
-        resp = ''.join(outlines)
-        logging.info('Output: %s', resp)
+        resps = ''.join(outlines)
+        for resp in resps.splitlines():
+            logging.info(resp)
         remotecommandclient.close()
-        return stdout.read().decode()
+        # return stdout.read().decode()
+        if returncode != 0:
+            return func.HttpResponse(
+                "Error in backing up the kernel.",
+                status_code=400
+            )
         
     logging.info('Getting the sapservices file.')
     transport = paramiko.Transport((host, 22))

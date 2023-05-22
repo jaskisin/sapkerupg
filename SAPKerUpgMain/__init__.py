@@ -60,11 +60,17 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     remote_command_client.connect(host, username="root", password=rootpass)
     stdin, stdout, stderr = remote_command_client.exec_command("chmod 777 /tmp/"+sapcarfile+" /tmp/"+sapexefile, get_pty=True)
     stdin, stdout, stderr = remote_command_client.exec_command("/tmp/"+sapcarfile+" -xvf /tmp/"+sapexefile+" -R /sapmnt/"+sid+"/exe/uc/linuxx86_64", get_pty=True)
-    stdout.channel.recv_exit_status()
+    returncode = stdout.channel.recv_exit_status()
     outlines = stdout.readlines()
-    resp = ''.join(outlines)
-    logging.info('Output: %s', resp)
+    resps = ''.join(outlines)
+    for resp in resps.splitlines():
+        logging.info(resp)
     remote_command_client.close()
+    if returncode != 0:
+        return func.HttpResponse(
+            "Error in extracing the kernel.",
+            status_code=400
+        )    
     
     #output = run_remote_command(host, osuser, ospass, "chmod 777 /tmp/"+sapcarfile+" /tmp/"+sapexefile+";/tmp/"+sapcarfile+" -xvf /tmp/"+sapexefile+" -R /sapmnt/"+sid+"/exe/uc/linuxx86_64")
     
