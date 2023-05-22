@@ -12,17 +12,15 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     except ValueError:
         pass
     else:
-        accountname = req_body.get('AccountName')
-        container = req_body.get('Container')
-        sascred = req_body.get('SASCred')
-        sapexefile = req_body.get('SAPExeFile')
-        sapcarfile = req_body.get('SAPCarFile')
         host = req_body.get('hostname')
-        osuser = req_body.get('OperatingSystemUser')
-        ospass = req_body.get('OperatingSystemPass')
         rootpass = req_body.get('RootPass')
         sid = req_body.get('SID')
 
+    logging.info('Checking for the passed parameters in request body.')
+    logging.info('hostname: '+host)
+    logging.info('SID: '+sid)
+    
+    logging.info('Getting the sapservices file.')
     transport = paramiko.Transport((host, 22))
     transport.connect(username = "root", password = rootpass)
     sftp = paramiko.SFTPClient.from_transport(transport)
@@ -38,29 +36,55 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         if sid.lower()+"adm" in line:
             if "ASCS" in line:
                 ascsprofile=line.split(" ")[2]
-                sid=line.split("/")[3]
+                logging.info('ASCS profile: '+ascsprofile)
             else:
                 diaprofile=line.split(" ")[2]
-                sid=line.split("/")[3]
+                logging.info('DIA profile: '+diaprofile)
                 
     remote_command_client = paramiko.client.SSHClient()
     remote_command_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     remote_command_client.connect(host, username="root", password=rootpass)
+    logging.info('Executing the sapcpe command for ASCS profile.')
+    logging.info('Command: su - '+sid.lower()+'adm -c "/sapmnt/'+sid+'/exe/uc/linuxx86_64/sapcpe '+ascsprofile+'"')
     stdin, stdout, stderr = remote_command_client.exec_command("su - "+sid.lower()+"adm -c \"/sapmnt/"+sid+"/exe/uc/linuxx86_64/sapcpe "+ascsprofile+"\"", get_pty=True)
-    stdout.channel.recv_exit_status()
+    returncode = stdout.channel.recv_exit_status()
     outlines = stdout.readlines()
-    resp = ''.join(outlines)
-    logging.info('Output: %s', resp)
+    resps = ''.join(outlines)
+    for resp in resps.splitlines():
+        logging.info(resp)
+    if returncode != 0:
+        return func.HttpResponse(
+            "Error in extracing the kernel.",
+            status_code=400
+        )
+    
+    logging.info('Executing the sapcpe command for DIA profile.')
+    logging.info('Command: su - '+sid.lower()+'adm -c "/sapmnt/'+sid+'/exe/uc/linuxx86_64/sapcpe '+diaprofile+'"')
     stdin, stdout, stderr = remote_command_client.exec_command("su - "+sid.lower()+"adm -c \"/sapmnt/"+sid+"/exe/uc/linuxx86_64/sapcpe "+diaprofile+"\"", get_pty=True)
-    stdout.channel.recv_exit_status()
+    returncode = stdout.channel.recv_exit_status()
     outlines = stdout.readlines()
-    resp = ''.join(outlines)
-    logging.info('Output: %s', resp)
+    resps = ''.join(outlines)
+    for resp in resps.splitlines():
+        logging.info(resp)
+    if returncode != 0:
+        return func.HttpResponse(
+            "Error in extracing the kernel.",
+            status_code=400
+        )
+    
+    logging.info('Executing the saproot.sh command.')
+    logging.info('Command: /sapmnt/'+sid+'/exe/uc/linuxx86_64/saproot.sh '+sid)
     stdin, stdout, stderr = remote_command_client.exec_command("/sapmnt/"+sid+"/exe/uc/linuxx86_64/saproot.sh "+sid, get_pty=True)
-    stdout.channel.recv_exit_status()
+    returncode = stdout.channel.recv_exit_status()
     outlines = stdout.readlines()
-    resp = ''.join(outlines)
-    logging.info('Output: %s', resp)
+    resps = ''.join(outlines)
+    for resp in resps.splitlines():
+        logging.info(resp)
+    if returncode != 0:
+        return func.HttpResponse(
+            "Error in extracing the kernel.",
+            status_code=400
+        )
     remote_command_client.close()
     return func.HttpResponse(
         "This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response.",
