@@ -7,6 +7,7 @@ import paramiko
 def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Python HTTP trigger function processed a request.')
 
+    # Check for the passed parameters in request body.
     try:
         req_body = req.get_json()
     except ValueError:
@@ -22,6 +23,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('SAPOperation: '+sapops)
     logging.info('SID: '+sid)
     
+    # Function to run remote commands.
     def run_remote_command(server, loginid, loginpass, command):
         remotecommandclient = paramiko.client.SSHClient()
         remotecommandclient.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -33,9 +35,9 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         for resp in resps.splitlines():
             logging.info(resp)
         remotecommandclient.close()
-        # return stdout.read().decode()
         return returncode
         
+    # Get the ASCS and DIA system numbers.
     logging.info('Getting the sapservices file.')
     transport = paramiko.Transport((host, 22))
     transport.connect(username = 'root', password = rootpass)
@@ -47,9 +49,6 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Reading the file.')
     file1 = open('/tmp/sapservices', 'r')
     Lines = file1.readlines()
-    # for line in Lines:
-    #     if "ASCS" in line:
-    #         sid=line.split("/")[3]
     
     logging.info('Getting the ASCS and DIA system numbers.')
     for line in Lines:
@@ -62,6 +61,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('ASCS System Number: '+ascssysnr)
     logging.info('DIA System Number: '+diasysnr)
     
+    # Perform the SAP operation.
     if sapops == "Stop":
         logging.info('Stopping the DIA instances.')
         logging.info('Command: '+'su - '+sid.lower()+'adm -c "sapcontrol -nr '+diasysnr+' -function Stop"')

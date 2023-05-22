@@ -11,6 +11,7 @@ import paramiko
 def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Python HTTP trigger function processed a request.')
 
+    # Check for the passed parameters in request body.
     try:
         req_body = req.get_json()
     except ValueError:
@@ -34,6 +35,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     accounturl = "https://"+accountname+".blob.core.windows.net"
     logging.info('AccountURL: '+accounturl)
     
+    # Download the kernel files from blob storage.
     logging.info('Downloading file '+sapexefile+' from blob storage.')
     blob_service_client = BlobServiceClient(accounturl,sascred)
     blob_client = blob_service_client.get_blob_client(container=container, blob=sapexefile)
@@ -45,9 +47,8 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     with open(file=os.path.join("/tmp/", sapcarfile), mode="wb") as sample_blob:
         download_stream = blob_client.download_blob()
         sample_blob.write(download_stream.readall())
-        
     
-    
+    # Upload the kernel files to remote host.
     client = paramiko.client.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     client.connect(host, username='root', password=rootpass)
@@ -59,6 +60,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     sftp.close()
     client.close()
     
+    # Backup the kernel.
     logging.info('Backing up the kernel.')
     remotecommandclient = paramiko.client.SSHClient()
     remotecommandclient.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -77,6 +79,6 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         )
 
     return func.HttpResponse(
-        "Success",
+        "Pre-Steps completed successfully.",
         status_code=200
     )

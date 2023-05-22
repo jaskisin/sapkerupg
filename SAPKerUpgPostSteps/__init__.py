@@ -7,6 +7,7 @@ import paramiko
 def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Python HTTP trigger function processed a request.')
 
+    # Reading the request body
     try:
         req_body = req.get_json()
     except ValueError:
@@ -20,6 +21,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('hostname: '+host)
     logging.info('SID: '+sid)
     
+    # Getting the sapservices file
     logging.info('Getting the sapservices file.')
     transport = paramiko.Transport((host, 22))
     transport.connect(username = "root", password = rootpass)
@@ -28,10 +30,12 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     sftp.close()
     transport.close()
     
+    # Reading the sapservices file
     logging.info('Reading the file.')
     file1 = open('/tmp/sapservices', 'r')
     Lines = file1.readlines()
     
+    # Getting the ASCS and DIA profiles
     for line in Lines:
         if sid.lower()+"adm" in line:
             if "ASCS" in line:
@@ -40,7 +44,8 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             else:
                 diaprofile=line.split(" ")[2]
                 logging.info('DIA profile: '+diaprofile)
-                
+    
+    # Performing the sapcpe and saproot.sh command                
     remote_command_client = paramiko.client.SSHClient()
     remote_command_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     remote_command_client.connect(host, username="root", password=rootpass)
@@ -86,7 +91,8 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             status_code=400
         )
     remote_command_client.close()
+    
     return func.HttpResponse(
-        "This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response.",
+        "SAP Kernel upgrade post steps completed successfully.",
         status_code=200
     )
