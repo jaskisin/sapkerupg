@@ -20,15 +20,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Checking for the passed parameters.')
     logging.info('hostname: '+host)
     logging.info('SAPOperation: '+sapops)
-
-    # def download_file_from_remote(server, loginid, loginpass, remotefile, localpath):
-    #     port = 22
-    #     transport = paramiko.Transport((server, port))
-    #     transport.connect(username = loginid, password = loginpass)
-    #     sftp = paramiko.SFTPClient.from_transport(transport)
-    #     sftp.get(remotefile, localpath)
-    #     sftp.close()
-    #     transport.close()
+    logging.info('SID: '+sid)
     
     def run_remote_command(server, loginid, loginpass, command):
         remotecommandclient = paramiko.client.SSHClient()
@@ -58,7 +50,8 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     # for line in Lines:
     #     if "ASCS" in line:
     #         sid=line.split("/")[3]
-    logging.info('SID: '+sid)    
+    
+    logging.info('Getting the ASCS and DIA system numbers.')
     for line in Lines:
         if sid.lower()+"adm" in line:
             if "ASCS" in line:
@@ -66,13 +59,20 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             else:
                 diasysnr = line.split("/")[4][-2:]
     
+    logging.info('ASCS System Number: '+ascssysnr)
+    logging.info('DIA System Number: '+diasysnr)
+    
     if sapops == "Stop":
+        logging.info('Stopping the DIA instances.')
+        logging.info('Command: '+'su - '+sid.lower()+'adm -c "sapcontrol -nr '+diasysnr+' -function Stop"')
         rc = run_remote_command(host, 'root', rootpass, "su - "+sid.lower()+"adm -c \"sapcontrol -nr "+diasysnr+" -function Stop\"")
         if rc != 0:
             return func.HttpResponse(
                 "Error in stopping the "+sid+" DIA instance.",
                 status_code=400
             )
+        logging.info('Stopping the ASCS instances.')
+        logging.info('Command: '+'su - '+sid.lower()+'adm -c "sapcontrol -nr '+ascssysnr+' -function Stop"')
         rc = run_remote_command(host, 'root', rootpass, "su - "+sid.lower()+"adm -c \"sapcontrol -nr "+ascssysnr+" -function Stop\"")
         if rc != 0:
             return func.HttpResponse(
@@ -80,12 +80,16 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
                 status_code=400
             )
     elif sapops == "Start":
+        logging.info('Starting the ASCS instances.')
+        logging.info('Command: '+'su - '+sid.lower()+'adm -c "sapcontrol -nr '+ascssysnr+' -function Start"')
         rc = run_remote_command(host, 'root', rootpass, "su - "+sid.lower()+"adm -c \"sapcontrol -nr "+ascssysnr+" -function Start\"")
         if rc != 0:
             return func.HttpResponse(
                 "Error in starting the "+sid+" ASCS instance.",
                 status_code=400
             )
+        logging.info('Starting the DIA instances.')
+        logging.info('Command: '+'su - '+sid.lower()+'adm -c "sapcontrol -nr '+diasysnr+' -function Start"')
         rc = run_remote_command(host, 'root', rootpass, "su - "+sid.lower()+"adm -c \"sapcontrol -nr "+diasysnr+" -function Start\"")
         if rc != 0:
             return func.HttpResponse(
@@ -93,12 +97,16 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
                 status_code=400
             )
     elif sapops == "StopService":
+        logging.info('Stopping the DIA Service.')
+        logging.info('Command: '+'su - '+sid.lower()+'adm -c "sapcontrol -nr '+diasysnr+' -function StopService"')
         rc = run_remote_command(host, 'root', rootpass, "su - "+sid.lower()+"adm -c \"sapcontrol -nr "+diasysnr+" -function StopService\"")
         if rc != 0:
             return func.HttpResponse(
                 "Error in stopping the "+sid+" DIA Service.",
                 status_code=400
             )
+        logging.info('Stopping the ASCS Service.')
+        logging.info('Command: '+'su - '+sid.lower()+'adm -c "sapcontrol -nr '+ascssysnr+' -function StopService"')
         rc = run_remote_command(host, 'root', rootpass, "su - "+sid.lower()+"adm -c \"sapcontrol -nr "+ascssysnr+" -function StopService\"")
         if rc != 0:
             return func.HttpResponse(
@@ -106,12 +114,16 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
                 status_code=400
             )
     elif sapops == "StartService":
+        logging.info('Starting the ASCS Service.')
+        logging.info('Command: '+'su - '+sid.lower()+'adm -c "sapcontrol -nr '+ascssysnr+' -function StartService '+sid+'"')
         rc = run_remote_command(host, 'root', rootpass, "su - "+sid.lower()+"adm -c \"sapcontrol -nr "+ascssysnr+" -function StartService "+sid+"\"")
         if rc != 0:
             return func.HttpResponse(
                 "Error in Starting the "+sid+" ASCS Service.",
                 status_code=400
             )
+        logging.info('Starting the DIA Service.')
+        logging.info('Command: '+'su - '+sid.lower()+'adm -c "sapcontrol -nr '+diasysnr+' -function StartService '+sid+'"')
         rc = run_remote_command(host, 'root', rootpass, "su - "+sid.lower()+"adm -c \"sapcontrol -nr "+diasysnr+" -function StartService "+sid+"\"")
         if rc != 0:
             return func.HttpResponse(
@@ -119,6 +131,8 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
                 status_code=400
             )
     elif sapops == "KillAll":
+        logging.info('Killing the processes with '+sid+'adm user.')
+        logging.info('Command: '+'killall -u '+sid.lower()+'adm')
         rc = run_remote_command(host, 'root', rootpass, "killall -u "+sid.lower()+"adm")
         if rc != 0:
             return func.HttpResponse(
