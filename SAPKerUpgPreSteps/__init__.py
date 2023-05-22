@@ -116,8 +116,9 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     stdin, stdout, stderr = remotecommandclient.exec_command("tar -cvf /tmp/sapkernelbackup.tar.gz /sapmnt/"+sid+"/exe/uc/linuxx86_64", get_pty=True)
     returncode = stdout.channel.recv_exit_status()
     outlines = stdout.readlines()
-    resp = ''.join(outlines)
-    logging.info('Output: %s', resp)
+    resps = ''.join(outlines)
+    for resp in resps.splitlines():
+        logging.info(resp)
     remotecommandclient.close()
     if returncode != 0:
         return func.HttpResponse(
