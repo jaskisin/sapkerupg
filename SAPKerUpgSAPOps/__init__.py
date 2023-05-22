@@ -55,12 +55,12 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Reading the file.')
     file1 = open('/tmp/sapservices', 'r')
     Lines = file1.readlines()
-    for line in Lines:
-        if "ASCS" in line:
-            sid=line.split("/")[3]
+    # for line in Lines:
+    #     if "ASCS" in line:
+    #         sid=line.split("/")[3]
     logging.info('SID: '+sid)    
     for line in Lines:
-        if sid+"adm" in line:
+        if sid.lower()+"adm" in line:
             if "ASCS" in line:
                 ascssysnr = line.split("/")[4][-2:]
             else:

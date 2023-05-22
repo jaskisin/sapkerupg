@@ -35,7 +35,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     Lines = file1.readlines()
     
     for line in Lines:
-        if sid+"adm" in line:
+        if sid.lower()+"adm" in line:
             if "ASCS" in line:
                 ascsprofile=line.split(" ")[2]
                 sid=line.split("/")[3]
