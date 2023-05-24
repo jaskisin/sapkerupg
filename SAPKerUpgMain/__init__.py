@@ -1,5 +1,7 @@
 import logging
 
+import time
+
 import azure.functions as func
 
 import paramiko
@@ -55,7 +57,8 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             return func.HttpResponse(
                 "Error in extracing "+sapexefile+" the kernel.",
                 status_code=400
-            )    
+            )
+        time.sleep(1)    
        
     return func.HttpResponse(
         "Kernel extracted successfully.",
