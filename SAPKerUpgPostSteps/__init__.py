@@ -59,7 +59,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         logging.info(resp)
     if returncode != 0:
         return func.HttpResponse(
-            "Error in extracing the kernel.",
+            "Error in sapcpe command for ASCS.",
             status_code=400
         )
     
@@ -73,7 +73,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         logging.info(resp)
     if returncode != 0:
         return func.HttpResponse(
-            "Error in extracing the kernel.",
+            "Error in sapcpe command for DIA.",
             status_code=400
         )
     
@@ -87,7 +87,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         logging.info(resp)
     if returncode != 0:
         return func.HttpResponse(
-            "Error in extracing the kernel.",
+            "Error in executing saproot.sh",
             status_code=400
         )
     remote_command_client.close()
