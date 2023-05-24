@@ -46,7 +46,6 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         resps = ''.join(outlines)
         for resp in resps.splitlines():
             logging.info(resp)
-        remote_command_client.close()
         if returncode != 0:
             return func.HttpResponse(
                 "Error in extracing "+sapexefile+" the kernel.",
@@ -59,6 +58,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         returncode = None
         outlines = None
         resps = None    
+    remote_command_client.close()
        
     return func.HttpResponse(
         "Kernel extracted successfully.",
