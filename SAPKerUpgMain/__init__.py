@@ -39,12 +39,6 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     stdin, stdout, stderr = remote_command_client.exec_command("chmod 777"+command, get_pty=True)
     logging.info('Extracting the kernel.')
     for sapexefile in sapexefiles.split(','):
-        stdin = None
-        stdout = None
-        stderr = None
-        returncode = None
-        outlines = None
-        resps = None
         logging.info("Command: /tmp/"+sapcarfile+" -xvf /tmp/"+sapexefile+" -R /sapmnt/"+sid+"/exe/uc/linuxx86_64")
         stdin, stdout, stderr = remote_command_client.exec_command("su - "+sid.lower()+"adm -c \"/tmp/"+sapcarfile+" -xvf /tmp/"+sapexefile+" -R /sapmnt/"+sid+"/exe/uc/linuxx86_64\"", get_pty=True)
         returncode = stdout.channel.recv_exit_status()
@@ -58,7 +52,13 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
                 "Error in extracing "+sapexefile+" the kernel.",
                 status_code=400
             )
-        time.sleep(1)    
+        time.sleep(1)
+        stdin = None
+        stdout = None
+        stderr = None
+        returncode = None
+        outlines = None
+        resps = None    
        
     return func.HttpResponse(
         "Kernel extracted successfully.",
