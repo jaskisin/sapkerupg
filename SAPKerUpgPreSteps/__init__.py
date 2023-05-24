@@ -20,7 +20,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         accountname = req_body.get('AccountName')
         container = req_body.get('Container')
         sascred = req_body.get('SASCred')
-        sapexefile = req_body.get('SAPExeFile')
+        sapexefiles = req_body.get('SAPExeFiles')
         sapcarfile = req_body.get('SAPCarFile')
         host = req_body.get('hostname')
         rootpass = req_body.get('RootPass')
@@ -36,12 +36,14 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('AccountURL: '+accounturl)
     
     # Download the kernel files from blob storage.
-    logging.info('Downloading file '+sapexefile+' from blob storage.')
-    blob_service_client = BlobServiceClient(accounturl,sascred)
-    blob_client = blob_service_client.get_blob_client(container=container, blob=sapexefile)
-    with open(file=os.path.join("/tmp/", sapexefile), mode="wb") as sample_blob:
-        download_stream = blob_client.download_blob()
-        sample_blob.write(download_stream.readall())
+    for sapexefile in sapexefiles.split(','):
+        logging.info('Downloading file '+sapexefile+' from blob storage.')
+        blob_service_client = BlobServiceClient(accounturl,sascred)
+        blob_client = blob_service_client.get_blob_client(container=container, blob=sapexefile)
+        with open(file=os.path.join("/tmp/", sapexefile), mode="wb") as sample_blob:
+            download_stream = blob_client.download_blob()
+            sample_blob.write(download_stream.readall())
+            
     logging.info('Downloading file '+sapcarfile+' from blob storage.')
     blob_client = blob_service_client.get_blob_client(container=container, blob=sapcarfile)
     with open(file=os.path.join("/tmp/", sapcarfile), mode="wb") as sample_blob:
@@ -53,8 +55,9 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     client.connect(host, username='root', password=rootpass)
     sftp = client.open_sftp()
-    logging.info('Uploading file '+sapexefile+' to remote host.')
-    sftp.put("/tmp/"+sapexefile, "/tmp/"+sapexefile)
+    for sapexefile in sapexefiles.split(','):
+        logging.info('Uploading file '+sapexefile+' to remote host.')
+        sftp.put("/tmp/"+sapexefile, "/tmp/"+sapexefile)
     logging.info('Uploading file '+sapcarfile+' to remote host.')
     sftp.put("/tmp/"+sapcarfile, "/tmp/"+sapcarfile)
     sftp.close()
