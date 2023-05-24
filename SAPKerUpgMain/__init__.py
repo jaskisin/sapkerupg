@@ -33,6 +33,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     command = ""
     for sapexefile in sapexefiles.split(','):
         command += " /tmp/"+sapexefile
+    logging.info("Command: chmod 777"+command)
     stdin, stdout, stderr = remote_command_client.exec_command("chmod 777"+command, get_pty=True)
     logging.info('Extracting the kernel.')
     for sapexefile in sapexefiles.split(','):
