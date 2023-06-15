@@ -53,8 +53,8 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     # Upload the kernel files to remote host.
     client = paramiko.client.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    pkey = paramiko.RSAKey.from_type_string(sshkey)
-    client.connect(host, username='azureuser', pkey=pkey)
+    privatekey = paramiko.RSAKey.from_type_string(sshkey)
+    client.connect(host, username='azureuser', pkey=privatekey)
     sftp = client.open_sftp()
     for sapexefile in sapexefiles.split(','):
         logging.info('Uploading file '+sapexefile+' to remote host.')
@@ -68,8 +68,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Backing up the kernel.')
     remotecommandclient = paramiko.client.SSHClient()
     remotecommandclient.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    pkey = paramiko.RSAKey.from_type_string(sshkey)
-    remotecommandclient.connect(host, username='azureuser', pkey=pkey)
+    remotecommandclient.connect(host, username='azureuser', pkey=privatekey)
     stdin, stdout, stderr = remotecommandclient.exec_command("sudo tar -cvf /tmp/sapkernelbackup.tar.gz /sapmnt/"+sid+"/exe/uc/linuxx86_64", get_pty=True)
     returncode = stdout.channel.recv_exit_status()
     outlines = stdout.readlines()
