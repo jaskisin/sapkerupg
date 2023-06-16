@@ -20,22 +20,22 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         pass
     else:
         accountname = req_body.get('AccountName')
-        container = req_body.get('Container')
-        sascred = req_body.get('SASCred')
-        sapexefiles = req_body.get('SAPExeFiles')
-        sapcarfile = req_body.get('SAPCarFile')
-        host = req_body.get('hostname')
-        sshkey = req_body.get('sshkey')
-        sid = req_body.get('SID')
+        # container = req_body.get('Container')
+        # sascred = req_body.get('SASCred')
+        # sapexefiles = req_body.get('SAPExeFiles')
+        # sapcarfile = req_body.get('SAPCarFile')
+        # host = req_body.get('hostname')
+        # sshkey = req_body.get('sshkey')
+        # sid = req_body.get('SID')
         
-    logging.info('Checking for the passed parameters in request body.')
-    logging.info('AccountName: '+accountname)
-    logging.info('Container: '+container)
-    logging.info('SASCred: '+sascred)
-    logging.info('hostname: '+host)
+    # logging.info('Checking for the passed parameters in request body.')
+    # logging.info('AccountName: '+accountname)
+    # logging.info('Container: '+container)
+    # logging.info('SASCred: '+sascred)
+    # logging.info('hostname: '+host)
           
-    accounturl = "https://"+accountname+".blob.core.windows.net"
-    logging.info('AccountURL: '+accounturl)
+    # accounturl = "https://"+accountname+".blob.core.windows.net"
+    # logging.info('AccountURL: '+accounturl)
     
     # Download the kernel files from blob storage.
     # for sapexefile in sapexefiles.split(','):
