@@ -2,7 +2,7 @@ import logging
 
 import azure.functions as func
 
-import os
+import os,stat
 
 from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient, BlobLeaseClient, BlobPrefix, ContentSettings
 
@@ -52,11 +52,14 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         download_stream = blob_client.download_blob()
         sample_blob.write(download_stream.readall())
     
+    f = open("/tmp/sshkey.pem", "w")
+    f.write(sshkey)
+    f.close()
+    os.chmod("/tmp/sshkey.pem", stat.S_IREAD)
+    privatekey = paramiko.RSAKey.from_private_key_file("/tmp/sshkey.pem")
     # Upload the kernel files to remote host.
     client = paramiko.client.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    privatekeyfile = StringIO(sshkey)
-    privatekey = paramiko.RSAKey.from_private_key(privatekeyfile)
     client.connect(host, username='azureuser', pkey=privatekey)
     sftp = client.open_sftp()
     for sapexefile in sapexefiles.split(','):
