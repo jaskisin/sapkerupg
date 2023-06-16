@@ -52,11 +52,9 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         download_stream = blob_client.download_blob()
         sample_blob.write(download_stream.readall())
     
-    f = open("/tmp/sshkey.pem", "w")
-    f.write(sshkey)
-    f.close()
-    os.chmod("/tmp/sshkey.pem", stat.S_IREAD)
-    privatekey = paramiko.RSAKey.from_private_key_file("/tmp/sshkey.pem")
+    parasshkey = sshkey.replace("\r\n","\n")
+    privatekeyfile = StringIO(parasshkey)
+    privatekey = paramiko.RSAKey.from_private_key(privatekeyfile)
     # Upload the kernel files to remote host.
     client = paramiko.client.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -74,8 +72,6 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Backing up the kernel.')
     remotecommandclient = paramiko.client.SSHClient()
     remotecommandclient.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    privatekeyfile = StringIO.StringIO(sshkey)
-    privatekey = paramiko.RSAKey.from_private_key(privatekeyfile)
     remotecommandclient.connect(host, username='azureuser', pkey=privatekey)
     stdin, stdout, stderr = remotecommandclient.exec_command("sudo tar -cvf /tmp/sapkernelbackup.tar.gz /sapmnt/"+sid+"/exe/uc/linuxx86_64", get_pty=True)
     returncode = stdout.channel.recv_exit_status()
