@@ -2,13 +2,13 @@ import logging
 
 import azure.functions as func
 
-import os,stat
+# import os,stat
 
 from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient, BlobLeaseClient, BlobPrefix, ContentSettings
 
 import paramiko
 
-from io import StringIO
+# from io import StringIO
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Python HTTP trigger function processed a request.')
