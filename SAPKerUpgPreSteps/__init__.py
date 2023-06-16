@@ -29,7 +29,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         # sid = req_body.get('SID')
         
     # logging.info('Checking for the passed parameters in request body.')
-    # logging.info('AccountName: '+accountname)
+    logging.info('AccountName: '+accountname)
     # logging.info('Container: '+container)
     # logging.info('SASCred: '+sascred)
     # logging.info('hostname: '+host)
