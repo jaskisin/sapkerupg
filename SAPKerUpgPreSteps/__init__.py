@@ -38,19 +38,19 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('AccountURL: '+accounturl)
     
     # Download the kernel files from blob storage.
-    for sapexefile in sapexefiles.split(','):
-        logging.info('Downloading file '+sapexefile+' from blob storage.')
-        blob_service_client = BlobServiceClient(accounturl,sascred)
-        blob_client = blob_service_client.get_blob_client(container=container, blob=sapexefile)
-        with open(file=os.path.join("/tmp/"+sapexefile), mode="wb") as sample_blob:
-            download_stream = blob_client.download_blob()
-            sample_blob.write(download_stream.readall())
+    # for sapexefile in sapexefiles.split(','):
+    #     logging.info('Downloading file '+sapexefile+' from blob storage.')
+    #     blob_service_client = BlobServiceClient(accounturl,sascred)
+    #     blob_client = blob_service_client.get_blob_client(container=container, blob=sapexefile)
+    #     with open(file=os.path.join("/tmp/"+sapexefile), mode="wb") as sample_blob:
+    #         download_stream = blob_client.download_blob()
+    #         sample_blob.write(download_stream.readall())
             
-    logging.info('Downloading file '+sapcarfile+' from blob storage.')
-    blob_client = blob_service_client.get_blob_client(container=container, blob=sapcarfile)
-    with open(file=os.path.join("/tmp/"+sapcarfile), mode="wb") as sample_blob:
-        download_stream = blob_client.download_blob()
-        sample_blob.write(download_stream.readall())
+    # logging.info('Downloading file '+sapcarfile+' from blob storage.')
+    # blob_client = blob_service_client.get_blob_client(container=container, blob=sapcarfile)
+    # with open(file=os.path.join("/tmp/"+sapcarfile), mode="wb") as sample_blob:
+    #     download_stream = blob_client.download_blob()
+    #     sample_blob.write(download_stream.readall())
     
     # parasshkey = sshkey.replace("\r\n","\n")
     # privatekeyfile = StringIO(parasshkey)
