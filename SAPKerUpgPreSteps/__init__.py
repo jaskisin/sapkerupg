@@ -42,20 +42,20 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         logging.info('Downloading file '+sapexefile+' from blob storage.')
         blob_service_client = BlobServiceClient(accounturl,sascred)
         blob_client = blob_service_client.get_blob_client(container=container, blob=sapexefile)
-        with open(file=os.path.join(sapexefile), mode="wb") as sample_blob:
+        with open(file=os.path.join("/tmp/"+sapexefile), mode="wb") as sample_blob:
             download_stream = blob_client.download_blob()
             sample_blob.write(download_stream.readall())
             
     logging.info('Downloading file '+sapcarfile+' from blob storage.')
     blob_client = blob_service_client.get_blob_client(container=container, blob=sapcarfile)
-    with open(file=os.path.join(sapcarfile), mode="wb") as sample_blob:
+    with open(file=os.path.join("/tmp/"+sapcarfile), mode="wb") as sample_blob:
         download_stream = blob_client.download_blob()
         sample_blob.write(download_stream.readall())
     
     # Upload the kernel files to remote host.
     client = paramiko.client.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    privatekeyfile = StringIO.StringIO(sshkey)
+    privatekeyfile = StringIO(sshkey)
     privatekey = paramiko.RSAKey.from_private_key(privatekeyfile)
     client.connect(host, username='azureuser', pkey=privatekey)
     sftp = client.open_sftp()
