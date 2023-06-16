@@ -8,6 +8,8 @@ from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient, B
 
 import paramiko
 
+from io import StringIO
+
 def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Python HTTP trigger function processed a request.')
 
@@ -40,20 +42,21 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         logging.info('Downloading file '+sapexefile+' from blob storage.')
         blob_service_client = BlobServiceClient(accounturl,sascred)
         blob_client = blob_service_client.get_blob_client(container=container, blob=sapexefile)
-        with open(file=os.path.join("/tmp/", sapexefile), mode="wb") as sample_blob:
+        with open(file=os.path.join(sapexefile), mode="wb") as sample_blob:
             download_stream = blob_client.download_blob()
             sample_blob.write(download_stream.readall())
             
     logging.info('Downloading file '+sapcarfile+' from blob storage.')
     blob_client = blob_service_client.get_blob_client(container=container, blob=sapcarfile)
-    with open(file=os.path.join("/tmp/", sapcarfile), mode="wb") as sample_blob:
+    with open(file=os.path.join(sapcarfile), mode="wb") as sample_blob:
         download_stream = blob_client.download_blob()
         sample_blob.write(download_stream.readall())
     
     # Upload the kernel files to remote host.
     client = paramiko.client.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    privatekey = paramiko.RSAKey.from_type_string(sshkey)
+    privatekeyfile = StringIO.StringIO(sshkey)
+    privatekey = paramiko.RSAKey.from_private_key(privatekeyfile)
     client.connect(host, username='azureuser', pkey=privatekey)
     sftp = client.open_sftp()
     for sapexefile in sapexefiles.split(','):
@@ -68,6 +71,8 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Backing up the kernel.')
     remotecommandclient = paramiko.client.SSHClient()
     remotecommandclient.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    privatekeyfile = StringIO.StringIO(sshkey)
+    privatekey = paramiko.RSAKey.from_private_key(privatekeyfile)
     remotecommandclient.connect(host, username='azureuser', pkey=privatekey)
     stdin, stdout, stderr = remotecommandclient.exec_command("sudo tar -cvf /tmp/sapkernelbackup.tar.gz /sapmnt/"+sid+"/exe/uc/linuxx86_64", get_pty=True)
     returncode = stdout.channel.recv_exit_status()
