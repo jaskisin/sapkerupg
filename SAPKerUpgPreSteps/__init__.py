@@ -63,7 +63,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     sftp.close()
     client.close()
     
-    # Backup the kernel.
+    # Backup the kernel
     logging.info('Backing up the kernel.')
     remotecommandclient = paramiko.client.SSHClient()
     remotecommandclient.set_missing_host_key_policy(paramiko.AutoAddPolicy())
