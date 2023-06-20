@@ -2,11 +2,13 @@ import logging
 
 import azure.functions as func
 
-import os
+import os,stat
 
 from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient, BlobLeaseClient, BlobPrefix, ContentSettings
 
 import paramiko
+
+from io import StringIO
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Python HTTP trigger function processed a request.')
@@ -23,7 +25,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         sapexefiles = req_body.get('SAPExeFiles')
         sapcarfile = req_body.get('SAPCarFile')
         host = req_body.get('hostname')
-        rootpass = req_body.get('RootPass')
+        sshkey = req_body.get('sshkey')
         sid = req_body.get('SID')
         
     logging.info('Checking for the passed parameters in request body.')
@@ -40,20 +42,23 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         logging.info('Downloading file '+sapexefile+' from blob storage.')
         blob_service_client = BlobServiceClient(accounturl,sascred)
         blob_client = blob_service_client.get_blob_client(container=container, blob=sapexefile)
-        with open(file=os.path.join("/tmp/", sapexefile), mode="wb") as sample_blob:
+        with open(file=os.path.join("/tmp/"+sapexefile), mode="wb") as sample_blob:
             download_stream = blob_client.download_blob()
             sample_blob.write(download_stream.readall())
             
     logging.info('Downloading file '+sapcarfile+' from blob storage.')
     blob_client = blob_service_client.get_blob_client(container=container, blob=sapcarfile)
-    with open(file=os.path.join("/tmp/", sapcarfile), mode="wb") as sample_blob:
+    with open(file=os.path.join("/tmp/"+sapcarfile), mode="wb") as sample_blob:
         download_stream = blob_client.download_blob()
         sample_blob.write(download_stream.readall())
     
+    parasshkey = sshkey.replace("\r\n","\n")
+    privatekeyfile = StringIO(parasshkey)
+    privatekey = paramiko.RSAKey.from_private_key(privatekeyfile)
     # Upload the kernel files to remote host.
     client = paramiko.client.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect(host, username='root', password=rootpass)
+    client.connect(host, username='azureuser', pkey=privatekey)
     sftp = client.open_sftp()
     for sapexefile in sapexefiles.split(','):
         logging.info('Uploading file '+sapexefile+' to remote host.')
@@ -63,12 +68,12 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     sftp.close()
     client.close()
     
-    # Backup the kernel
+    # Backup the kernel.
     logging.info('Backing up the kernel.')
     remotecommandclient = paramiko.client.SSHClient()
     remotecommandclient.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    remotecommandclient.connect(host, username='root', password=rootpass)
-    stdin, stdout, stderr = remotecommandclient.exec_command("tar -cvf /tmp/sapkernelbackup.tar.gz /sapmnt/"+sid+"/exe/uc/linuxx86_64", get_pty=True)
+    remotecommandclient.connect(host, username='azureuser', pkey=privatekey)
+    stdin, stdout, stderr = remotecommandclient.exec_command("sudo tar -cvf /tmp/sapkernelbackup.tar.gz /sapmnt/"+sid+"/exe/uc/linuxx86_64", get_pty=True)
     returncode = stdout.channel.recv_exit_status()
     outlines = stdout.readlines()
     resps = ''.join(outlines)
