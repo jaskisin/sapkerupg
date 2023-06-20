@@ -2,7 +2,11 @@ import logging
 
 import azure.functions as func
 
+import os,stat
+
 import paramiko
+
+from io import StringIO
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Python HTTP trigger function processed a request.')
@@ -14,17 +18,21 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         pass
     else:
         host = req_body.get('hostname')
-        rootpass = req_body.get('RootPass')
+        sshkey = req_body.get('sshkey')
         sid = req_body.get('SID')
 
     logging.info('Checking for the passed parameters in request body.')
     logging.info('hostname: '+host)
     logging.info('SID: '+sid)
-    
+
+    parasshkey = sshkey.replace("\r\n","\n")
+    privatekeyfile = StringIO(parasshkey)
+    privatekey = paramiko.RSAKey.from_private_key(privatekeyfile)
+        
     # Getting the sapservices file
     logging.info('Getting the sapservices file.')
     transport = paramiko.Transport((host, 22))
-    transport.connect(username = "root", password = rootpass)
+    transport.connect(username="azureuser", pkey=privatekey)
     sftp = paramiko.SFTPClient.from_transport(transport)
     sftp.get("/usr/sap/sapservices", "/tmp/sapservices")
     sftp.close()
@@ -48,10 +56,10 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     # Performing the sapcpe and saproot.sh command                
     remote_command_client = paramiko.client.SSHClient()
     remote_command_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    remote_command_client.connect(host, username="root", password=rootpass)
+    remote_command_client.connect(host, username="azureuser", pkey=privatekey)
     logging.info('Executing the sapcpe command for ASCS profile.')
     logging.info('Command: su - '+sid.lower()+'adm -c "/sapmnt/'+sid+'/exe/uc/linuxx86_64/sapcpe '+ascsprofile+'"')
-    stdin, stdout, stderr = remote_command_client.exec_command("su - "+sid.lower()+"adm -c \"/sapmnt/"+sid+"/exe/uc/linuxx86_64/sapcpe "+ascsprofile+"\"", get_pty=True)
+    stdin, stdout, stderr = remote_command_client.exec_command("sudo su - "+sid.lower()+"adm -c \"/sapmnt/"+sid+"/exe/uc/linuxx86_64/sapcpe "+ascsprofile+"\"", get_pty=True)
     returncode = stdout.channel.recv_exit_status()
     outlines = stdout.readlines()
     resps = ''.join(outlines)
@@ -65,7 +73,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     
     logging.info('Executing the sapcpe command for DIA profile.')
     logging.info('Command: su - '+sid.lower()+'adm -c "/sapmnt/'+sid+'/exe/uc/linuxx86_64/sapcpe '+diaprofile+'"')
-    stdin, stdout, stderr = remote_command_client.exec_command("su - "+sid.lower()+"adm -c \"/sapmnt/"+sid+"/exe/uc/linuxx86_64/sapcpe "+diaprofile+"\"", get_pty=True)
+    stdin, stdout, stderr = remote_command_client.exec_command("sudo su - "+sid.lower()+"adm -c \"/sapmnt/"+sid+"/exe/uc/linuxx86_64/sapcpe "+diaprofile+"\"", get_pty=True)
     returncode = stdout.channel.recv_exit_status()
     outlines = stdout.readlines()
     resps = ''.join(outlines)
@@ -79,7 +87,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     
     logging.info('Executing the saproot.sh command.')
     logging.info('Command: /sapmnt/'+sid+'/exe/uc/linuxx86_64/saproot.sh '+sid)
-    stdin, stdout, stderr = remote_command_client.exec_command("/sapmnt/"+sid+"/exe/uc/linuxx86_64/saproot.sh "+sid, get_pty=True)
+    stdin, stdout, stderr = remote_command_client.exec_command("sudo /sapmnt/"+sid+"/exe/uc/linuxx86_64/saproot.sh "+sid, get_pty=True)
     returncode = stdout.channel.recv_exit_status()
     outlines = stdout.readlines()
     resps = ''.join(outlines)
