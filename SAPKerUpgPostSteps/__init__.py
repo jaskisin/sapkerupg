@@ -17,9 +17,12 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     except ValueError:
         pass
     else:
+        ipaddress = req_body.get('IpAddress')
         host = req_body.get('hostname')
         sshkey = req_body.get('sshkey')
         sid = req_body.get('SID')
+        ascssysnr = req_body.get('ASCSSysNr')
+        diasysnr = req_body.get('DIASysNr')
 
     logging.info('Checking for the passed parameters in request body.')
     logging.info('hostname: '+host)
@@ -30,33 +33,35 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     privatekey = paramiko.RSAKey.from_private_key(privatekeyfile)
         
     # Getting the sapservices file
-    logging.info('Getting the sapservices file.')
-    transport = paramiko.Transport((host, 22))
-    transport.connect(username="azureuser", pkey=privatekey)
-    sftp = paramiko.SFTPClient.from_transport(transport)
-    sftp.get("/usr/sap/sapservices", "/tmp/sapservices")
-    sftp.close()
-    transport.close()
+    # logging.info('Getting the sapservices file.')
+    # transport = paramiko.Transport((host, 22))
+    # transport.connect(username="azureuser", pkey=privatekey)
+    # sftp = paramiko.SFTPClient.from_transport(transport)
+    # sftp.get("/usr/sap/sapservices", "/tmp/sapservices")
+    # sftp.close()
+    # transport.close()
     
-    # Reading the sapservices file
-    logging.info('Reading the file.')
-    file1 = open('/tmp/sapservices', 'r')
-    Lines = file1.readlines()
+    # # Reading the sapservices file
+    # logging.info('Reading the file.')
+    # file1 = open('/tmp/sapservices', 'r')
+    # Lines = file1.readlines()
     
-    # Getting the ASCS and DIA profiles
-    for line in Lines:
-        if sid.lower()+"adm" in line:
-            if "ASCS" in line:
-                ascsprofile=line.split(" ")[2]
-                logging.info('ASCS profile: '+ascsprofile)
-            else:
-                diaprofile=line.split(" ")[2]
-                logging.info('DIA profile: '+diaprofile)
+    # # Getting the ASCS and DIA profiles
+    # for line in Lines:
+    #     if sid.lower()+"adm" in line:
+    #         if "ASCS" in line:
+    #             ascsprofile=line.split(" ")[2]
+    #             logging.info('ASCS profile: '+ascsprofile)
+    #         else:
+    #             diaprofile=line.split(" ")[2]
+    #             logging.info('DIA profile: '+diaprofile)
     
-    # Performing the sapcpe and saproot.sh command                
+    # Performing the sapcpe and saproot.sh command
+    ascsprofile = "/usr/sap/"+sid+"/ASCS"+ascssysnr+"/profile/"+sid+"_ASCS"+ascssysnr+"_"+host
+    diaprofile = "/usr/sap/"+sid+"/D"+diasysnr+"/profile/"+sid+"_D"+diasysnr+"_"+host                
     remote_command_client = paramiko.client.SSHClient()
     remote_command_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    remote_command_client.connect(host, username="azureuser", pkey=privatekey)
+    remote_command_client.connect(ipaddress, username="azureuser", pkey=privatekey)
     logging.info('Executing the sapcpe command for ASCS profile.')
     logging.info('Command: su - '+sid.lower()+'adm -c "/sapmnt/'+sid+'/exe/uc/linuxx86_64/sapcpe '+ascsprofile+'"')
     stdin, stdout, stderr = remote_command_client.exec_command("sudo su - "+sid.lower()+"adm -c \"/sapmnt/"+sid+"/exe/uc/linuxx86_64/sapcpe "+ascsprofile+"\"", get_pty=True)
