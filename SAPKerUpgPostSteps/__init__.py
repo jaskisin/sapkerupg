@@ -57,8 +57,8 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     #             logging.info('DIA profile: '+diaprofile)
     
     # Performing the sapcpe and saproot.sh command
-    ascsprofile = "/usr/sap/"+sid+"/ASCS"+ascssysnr+"/profile/"+sid+"_ASCS"+ascssysnr+"_"+host
-    diaprofile = "/usr/sap/"+sid+"/D"+diasysnr+"/profile/"+sid+"_D"+diasysnr+"_"+host                
+    ascsprofile = "/usr/sap/"+sid+"/SYS/profile/"+sid+"_ASCS"+ascssysnr+"_"+host
+    diaprofile = "/usr/sap/"+sid+"/SYS/profile/"+sid+"_D"+diasysnr+"_"+host                
     remote_command_client = paramiko.client.SSHClient()
     remote_command_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     remote_command_client.connect(ipaddress, username="azureuser", pkey=privatekey)
