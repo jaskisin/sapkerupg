@@ -44,7 +44,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     for sapexefile in sapexefiles.split(','):
         command += " /tmp/"+sapexefile
     logging.info("Command: chmod 777"+command)
-    stdin, stdout, stderr = remote_command_client.exec_command("sudo chmod 777"+command, get_pty=True)
+    stdin, stdout, stderr = remote_command_client.exec_command("sudo chmod 777 /tmp/"+sapcarfile+command, get_pty=True)
     logging.info('Extracting the kernel.')
     for sapexefile in sapexefiles.split(','):
         logging.info("Command: /tmp/"+sapcarfile+" -xvf /tmp/"+sapexefile+" -R /sapmnt/"+sid+"/exe/uc/linuxx86_64")
