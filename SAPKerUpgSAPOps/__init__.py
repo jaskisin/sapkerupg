@@ -21,7 +21,10 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         sshkey = req_body.get('sshkey')
         sapops = req_body.get('SAPOperation')
         sid = req_body.get('SID')
+        ascssysnr = req_body.get('ASCSSysNr')
+        diasysnr = req_body.get('DIASysNr')
         
+
     logging.info('Checking for the passed parameters.')
     logging.info('hostname: '+host)
     logging.info('SAPOperation: '+sapops)
@@ -46,25 +49,27 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         return returncode
         
     # Get the ASCS and DIA system numbers.
-    logging.info('Getting the sapservices file.')
-    transport = paramiko.Transport((host, 22))
-    transport.connect(username = 'azureuser', pkey=privatekey)
-    sftp = paramiko.SFTPClient.from_transport(transport)
-    sftp.get("/usr/sap/sapservices", "/tmp/sapservices")
-    sftp.close()
-    transport.close() 
+    # logging.info('Getting the sapservices file.')
+    # transport = paramiko.Transport((host, 22))
+    # transport.connect(username = 'azureuser', pkey=privatekey)
+    # sftp = paramiko.SFTPClient.from_transport(transport)
+    # sftp.get("/usr/sap/sapservices", "/tmp/sapservices")
+    # sftp.close()
+    # transport.close() 
     
-    logging.info('Reading the file.')
-    file1 = open('/tmp/sapservices', 'r')
-    Lines = file1.readlines()
+    # logging.info('Reading the file.')
+    # file1 = open('/tmp/sapservices', 'r')
+    # Lines = file1.readlines()
     
-    logging.info('Getting the ASCS and DIA system numbers.')
-    for line in Lines:
-        if sid.lower()+"adm" in line:
-            if "ASCS" in line:
-                ascssysnr = line.split("/")[4][-2:]
-            else:
-                diasysnr = line.split("/")[4][-2:]
+    # logging.info(Lines)
+    
+    # logging.info('Getting the ASCS and DIA system numbers.')
+    # for line in Lines:
+    #     if sid.lower()+"adm" in line:
+    #         if "ASCS" in line:
+    #             ascssysnr = line.split("/")[4][-2:]
+    #         else:
+    #             diasysnr = line.split("/")[4][-2:]
     
     logging.info('ASCS System Number: '+ascssysnr)
     logging.info('DIA System Number: '+diasysnr)
