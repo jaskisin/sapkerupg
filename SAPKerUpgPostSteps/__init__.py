@@ -64,7 +64,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     remote_command_client.connect(ipaddress, username="azureuser", pkey=privatekey)
     logging.info('Executing the sapcpe command for ASCS profile.')
     logging.info('Command: su - '+sid.lower()+'adm -c "/sapmnt/'+sid+'/exe/uc/linuxx86_64/sapcpe '+ascsprofile+'"')
-    stdin, stdout, stderr = remote_command_client.exec_command("sudo su - "+sid.lower()+"adm -c \"/sapmnt/"+sid+"/exe/uc/linuxx86_64/sapcpe "+ascsprofile+"\"", get_pty=True)
+    stdin, stdout, stderr = remote_command_client.exec_command("sudo su - "+sid.lower()+"adm -c \"/sapmnt/"+sid+"/exe/uc/linuxx86_64/sapcpe pf="+ascsprofile+"\"", get_pty=True)
     returncode = stdout.channel.recv_exit_status()
     outlines = stdout.readlines()
     resps = ''.join(outlines)
@@ -78,7 +78,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     
     logging.info('Executing the sapcpe command for DIA profile.')
     logging.info('Command: su - '+sid.lower()+'adm -c "/sapmnt/'+sid+'/exe/uc/linuxx86_64/sapcpe '+diaprofile+'"')
-    stdin, stdout, stderr = remote_command_client.exec_command("sudo su - "+sid.lower()+"adm -c \"/sapmnt/"+sid+"/exe/uc/linuxx86_64/sapcpe "+diaprofile+"\"", get_pty=True)
+    stdin, stdout, stderr = remote_command_client.exec_command("sudo su - "+sid.lower()+"adm -c \"/sapmnt/"+sid+"/exe/uc/linuxx86_64/sapcpe pf="+diaprofile+"\"", get_pty=True)
     returncode = stdout.channel.recv_exit_status()
     outlines = stdout.readlines()
     resps = ''.join(outlines)
