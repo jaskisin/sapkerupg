@@ -76,8 +76,8 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     # Perform the SAP operation.
     if sapops == "Stop":
         logging.info('Stopping the DIA instances.')
-        logging.info('Command: '+'su - '+sid.lower()+'adm -c "sapcontrol -nr '+sysnr+' -function Stop"')
-        rc = run_remote_command(ipaddress, adminuser, privatekey, "sudo su - "+sid.lower()+"adm -c \"sapcontrol -nr "+sysnr+" -function Stop\"")
+        logging.info('Command: '+'su - '+sid.lower()+'adm -c "sapcontrol -nr '+sysnr+' -function StopWait 300 0"')
+        rc = run_remote_command(ipaddress, adminuser, privatekey, "sudo su - "+sid.lower()+"adm -c \"sapcontrol -nr "+sysnr+" -function StopWait 300 0\"")
         if rc != 0:
             return func.HttpResponse(
                 "Error in stopping the "+sid+" DIA instance.",
@@ -85,8 +85,8 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             )
     elif sapops == "Start":
         logging.info('Starting the ASCS instances.')
-        logging.info('Command: '+'su - '+sid.lower()+'adm -c "sapcontrol -nr '+sysnr+' -function Start"')
-        rc = run_remote_command(ipaddress, adminuser, privatekey, "sudo su - "+sid.lower()+"adm -c \"sapcontrol -nr "+sysnr+" -function Start\"")
+        logging.info('Command: '+'su - '+sid.lower()+'adm -c "sapcontrol -nr '+sysnr+' -function StartWait 300 0"')
+        rc = run_remote_command(ipaddress, adminuser, privatekey, "sudo su - "+sid.lower()+"adm -c \"sapcontrol -nr "+sysnr+" -function StartWait 300 0\"")
         if rc != 0:
             return func.HttpResponse(
                 "Error in starting the "+sid+" ASCS instance.",
