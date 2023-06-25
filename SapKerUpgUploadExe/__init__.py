@@ -63,10 +63,46 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     sftp = client.open_sftp()
     for sapexefile in sapexefiles.split(','):
         logging.info('Uploading file '+sapexefile+' to remote host.')
-        sftp.put("/tmp/"+sapexefile, "/sapmnt/"+sid+"/"+sapexefile)
+        sftp.put("/tmp/"+sapexefile, "/tmp/"+sapexefile)
+        stdin, stdout, stderr = client.exec_command("sudo cp /tmp/"+sapexefile+" /sapmnt/"+sid+"/"+sapexefile, get_pty=True)
+        returncode = stdout.channel.recv_exit_status()
+        outlines = stdout.readlines()
+        resps = ''.join(outlines)
+        for resp in resps.splitlines():
+            logging.info(resp)
+        if returncode != 0:
+            sftp.close()
+            client.close()
+            return func.HttpResponse(
+                "Error in backing up the kernel.",
+                status_code=400
+            )
     logging.info('Uploading file '+sapcarfile+' to remote host.')
-    sftp.put("/tmp/"+sapcarfile, "/sapmnt/"+sid+"/"+sapcarfile)
+    sftp.put("/tmp/"+sapcarfile, "/tmp/"+sapcarfile)
+    stdin, stdout, stderr = client.exec_command("sudo cp /tmp/"+sapcarfile+" /sapmnt/"+sid+"/"+sapcarfile, get_pty=True)
+    returncode = stdout.channel.recv_exit_status()
+    outlines = stdout.readlines()
+    resps = ''.join(outlines)
+    for resp in resps.splitlines():
+        logging.info(resp)
+    if returncode != 0:
+        sftp.close()
+        client.close()
+        return func.HttpResponse(
+            "Error in backing up the kernel.",
+            status_code=400
+        )    
     sftp.close()
+    returncode = stdout.channel.recv_exit_status()
+    outlines = stdout.readlines()
+    resps = ''.join(outlines)
+    for resp in resps.splitlines():
+        logging.info(resp)
+    if returncode != 0:
+        return func.HttpResponse(
+            "Error in backing up the kernel.",
+            status_code=400
+        )
     client.close()
 
     return func.HttpResponse(
