@@ -21,8 +21,9 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         host = req_body.get('hostname')
         sshkey = req_body.get('sshkey')
         sid = req_body.get('SID')
-        ascssysnr = req_body.get('ASCSSysNr')
-        diasysnr = req_body.get('DIASysNr')
+        sysnr = req_body.get('SysNr')
+        typ = req_body.get('SysType')
+        adminuser = req_body.get('AdminUserName')        
 
     logging.info('Checking for the passed parameters in request body.')
     logging.info('hostname: '+host)
@@ -57,14 +58,16 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     #             logging.info('DIA profile: '+diaprofile)
     
     # Performing the sapcpe and saproot.sh command
-    ascsprofile = "/usr/sap/"+sid+"/SYS/profile/"+sid+"_ASCS"+ascssysnr+"_"+host
-    diaprofile = "/usr/sap/"+sid+"/SYS/profile/"+sid+"_D"+diasysnr+"_"+host                
+    if typ == "ASCS":
+        profile = "/usr/sap/"+sid+"/SYS/profile/"+sid+"_ASCS"+sysnr+"_"+host
+    elif typ == "DIA":
+        profile = "/usr/sap/"+sid+"/SYS/profile/"+sid+"_D"+sysnr+"_"+host
     remote_command_client = paramiko.client.SSHClient()
     remote_command_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    remote_command_client.connect(ipaddress, username="azureuser", pkey=privatekey)
+    remote_command_client.connect(ipaddress, username=adminuser, pkey=privatekey)
     logging.info('Executing the sapcpe command for ASCS profile.')
-    logging.info('Command: su - '+sid.lower()+'adm -c "/sapmnt/'+sid+'/exe/uc/linuxx86_64/sapcpe '+ascsprofile+'"')
-    stdin, stdout, stderr = remote_command_client.exec_command("sudo su - "+sid.lower()+"adm -c \"/sapmnt/"+sid+"/exe/uc/linuxx86_64/sapcpe pf="+ascsprofile+"\"", get_pty=True)
+    logging.info('Command: su - '+sid.lower()+'adm -c "/sapmnt/'+sid+'/exe/uc/linuxx86_64/sapcpe '+profile+'"')
+    stdin, stdout, stderr = remote_command_client.exec_command("sudo su - "+sid.lower()+"adm -c \"/sapmnt/"+sid+"/exe/uc/linuxx86_64/sapcpe pf="+profile+"\"", get_pty=True)
     returncode = stdout.channel.recv_exit_status()
     outlines = stdout.readlines()
     resps = ''.join(outlines)
@@ -73,20 +76,6 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     if returncode != 0:
         return func.HttpResponse(
             "Error in sapcpe command for ASCS.",
-            status_code=400
-        )
-    
-    logging.info('Executing the sapcpe command for DIA profile.')
-    logging.info('Command: su - '+sid.lower()+'adm -c "/sapmnt/'+sid+'/exe/uc/linuxx86_64/sapcpe '+diaprofile+'"')
-    stdin, stdout, stderr = remote_command_client.exec_command("sudo su - "+sid.lower()+"adm -c \"/sapmnt/"+sid+"/exe/uc/linuxx86_64/sapcpe pf="+diaprofile+"\"", get_pty=True)
-    returncode = stdout.channel.recv_exit_status()
-    outlines = stdout.readlines()
-    resps = ''.join(outlines)
-    for resp in resps.splitlines():
-        logging.info(resp)
-    if returncode != 0:
-        return func.HttpResponse(
-            "Error in sapcpe command for DIA.",
             status_code=400
         )
     
