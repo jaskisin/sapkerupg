@@ -95,7 +95,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             )
         logging.info('Waiting for the service to Start.')
         logging.info('Command: '+'sudo su - '+sid.lower()+'adm -c "sapcontrol -nr '+sysnr+' -function WaitforServiceStarted 300 0')
-        rc = run_remote_command(ipaddress, adminuser, privatekey, "sudo su - "+sid.lower()+"adm -c \"sapcontrol -nr "+sysnr+" -function WaitforServiceStarted 300 0")
+        rc = run_remote_command(ipaddress, adminuser, privatekey, "sudo su - "+sid.lower()+"adm -c \"sapcontrol -nr "+sysnr+" -function WaitforServiceStarted 300 0\"")
         if rc != 0:
             logging.error('Error in starting service for '+sysnr+' instance.')
             return func.HttpResponse(
