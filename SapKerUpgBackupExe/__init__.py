@@ -2,8 +2,6 @@ import logging
 
 import azure.functions as func
 
-import os,stat
-
 from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient, BlobLeaseClient, BlobPrefix, ContentSettings
 
 import paramiko
@@ -26,17 +24,20 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         
     logging.info('Checking for the passed parameters in request body.')
     logging.info('IpAddress: '+ipaddress)
-          
+    logging.info('SID: '+sid)
     
+    # Convert the sshkey to private key.
+    logging.info('Convert the sshkey to private key..')
     parasshkey = sshkey.replace("\r\n","\n")
     privatekeyfile = StringIO(parasshkey)
     privatekey = paramiko.RSAKey.from_private_key(privatekeyfile)
         
     # Backup the kernel.
-    logging.info('Backing up the kernel.')
+    logging.info('Backing up the kernel..')
     remotecommandclient = paramiko.client.SSHClient()
     remotecommandclient.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     remotecommandclient.connect(ipaddress, username=adminuser, pkey=privatekey)
+    logging.info("Command: sudo tar -cvf /tmp/sapkernelbackup.tar.gz /sapmnt/"+sid+"/exe/uc/linuxx86_64")
     stdin, stdout, stderr = remotecommandclient.exec_command("sudo tar -cvf /tmp/sapkernelbackup.tar.gz /sapmnt/"+sid+"/exe/uc/linuxx86_64", get_pty=True)
     returncode = stdout.channel.recv_exit_status()
     outlines = stdout.readlines()
@@ -45,12 +46,14 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         logging.info(resp)
     remotecommandclient.close()
     if returncode != 0:
+        logging.error("Error in backing up the kernel.")
         return func.HttpResponse(
             "Error in backing up the kernel.",
             status_code=400
         )
-
+        
+    logging.info('Backup of current Exe has been finished successfully.')
     return func.HttpResponse(
-        "Pre-Steps completed successfully.",
+        "Backup of current Exe has been finished successfully.",
         status_code=200
     )

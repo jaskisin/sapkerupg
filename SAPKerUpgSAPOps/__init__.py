@@ -29,7 +29,10 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('IpAddress: '+ipaddress)
     logging.info('SAPOperation: '+sapops)
     logging.info('SID: '+sid)
+    logging.info('SysNr: '+sysnr)
 
+    # Create the private key object.
+    logging.info('Creating the private key object.')
     parasshkey = sshkey.replace("\r\n","\n")
     privatekeyfile = StringIO(parasshkey)
     privatekey = paramiko.RSAKey.from_private_key(privatekeyfile)
@@ -47,81 +50,71 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             logging.info(resp)
         remotecommandclient.close()
         return returncode
-        
-    # Get the ASCS and DIA system numbers.
-    # logging.info('Getting the sapservices file.')
-    # transport = paramiko.Transport((host, 22))
-    # transport.connect(username = 'azureuser', pkey=privatekey)
-    # sftp = paramiko.SFTPClient.from_transport(transport)
-    # sftp.get("/usr/sap/sapservices", "/tmp/sapservices")
-    # sftp.close()
-    # transport.close() 
-    
-    # logging.info('Reading the file.')
-    # file1 = open('/tmp/sapservices', 'r')
-    # Lines = file1.readlines()
-    
-    # logging.info(Lines)
-    
-    # logging.info('Getting the ASCS and DIA system numbers.')
-    # for line in Lines:
-    #     if sid.lower()+"adm" in line:
-    #         if "ASCS" in line:
-    #             ascssysnr = line.split("/")[4][-2:]
-    #         else:
-    #             diasysnr = line.split("/")[4][-2:]
-    
-    logging.info('System Number: '+sysnr)
-    
+            
     # Perform the SAP operation.
     if sapops == "Stop":
-        logging.info('Stopping the DIA instances.')
-        logging.info('Command: '+'su - '+sid.lower()+'adm -c "sapcontrol -nr '+sysnr+' -function StopWait 300 0"')
+        logging.info('Stopping the '+sysnr+'instance.')
+        logging.info('Command: '+'sudo su - '+sid.lower()+'adm -c "sapcontrol -nr '+sysnr+' -function StopWait 300 0"')
         rc = run_remote_command(ipaddress, adminuser, privatekey, "sudo su - "+sid.lower()+"adm -c \"sapcontrol -nr "+sysnr+" -function StopWait 300 0\"")
         if rc != 0:
+            logging.info('Error in stopping the '+sysnr+' instance.')
             return func.HttpResponse(
-                "Error in stopping the "+sid+" DIA instance.",
+                "Error in stopping the "+sysnr+" instance.",
                 status_code=400
             )
     elif sapops == "Start":
-        logging.info('Starting the ASCS instances.')
-        logging.info('Command: '+'su - '+sid.lower()+'adm -c "sapcontrol -nr '+sysnr+' -function StartWait 300 0"')
+        logging.info('Starting the '+sysnr+' instance.')
+        logging.info('Command: '+'sudo su - '+sid.lower()+'adm -c "sapcontrol -nr '+sysnr+' -function StartWait 300 0"')
         rc = run_remote_command(ipaddress, adminuser, privatekey, "sudo su - "+sid.lower()+"adm -c \"sapcontrol -nr "+sysnr+" -function StartWait 300 0\"")
         if rc != 0:
+            logging.error('Error in starting the '+sysnr+' instance.')
             return func.HttpResponse(
-                "Error in starting the "+sid+" ASCS instance.",
+                "Error in starting the "+sysnr+" instance.",
                 status_code=400
             )
 
     elif sapops == "StopService":
-        logging.info('Stopping the DIA Service.')
-        logging.info('Command: '+'su - '+sid.lower()+'adm -c "sapcontrol -nr '+sysnr+' -function StopService"')
+        logging.info('Stopping the '+sysnr+' instance.')
+        logging.info('Command: '+'sudo su - '+sid.lower()+'adm -c "sapcontrol -nr '+sysnr+' -function StopService"')
         rc = run_remote_command(ipaddress, adminuser, privatekey, "sudo su - "+sid.lower()+"adm -c \"sapcontrol -nr "+sysnr+" -function StopService\"")
         if rc != 0:
+            logging.error('Error in stopping the '+sysnr+' instance.')
             return func.HttpResponse(
-                "Error in stopping the "+sid+" DIA Service.",
+                "Error in stopping the "+sysnr+" Service.",
                 status_code=400
             )
     elif sapops == "StartService":
-        logging.info('Starting the ASCS Service.')
-        logging.info('Command: '+'su - '+sid.lower()+'adm -c "sapcontrol -nr '+sysnr+' -function StartService '+sid+'"')
+        logging.info('Starting Service for '+sysnr+' instance.')
+        logging.info('Command: '+'sudo su - '+sid.lower()+'adm -c "sapcontrol -nr '+sysnr+' -function StartService '+sid+'"')
         rc = run_remote_command(ipaddress, adminuser, privatekey, "sudo su - "+sid.lower()+"adm -c \"sapcontrol -nr "+sysnr+" -function StartService "+sid+"\"")
         if rc != 0:
+            logging.error('Error in starting service for '+sysnr+' instance.')
             return func.HttpResponse(
-                "Error in Starting the "+sid+" ASCS Service.",
+                "Error in Starting service for "+sysnr+" Service.",
                 status_code=400
             )
+        logging.info('Waiting for the service to Start.')
+        logging.info('Command: '+'sudo su - '+sid.lower()+'adm -c "sapcontrol -nr '+sysnr+' -function WaitforServiceStarted 300 0')
+        rc = run_remote_command(ipaddress, adminuser, privatekey, "sudo su - "+sid.lower()+"adm -c \"sapcontrol -nr "+sysnr+" -function WaitforServiceStarted 300 0")
+        if rc != 0:
+            logging.error('Error in starting service for '+sysnr+' instance.')
+            return func.HttpResponse(
+                "Error in Starting service for "+sysnr+" Service.",
+                status_code=400
+            )            
             
     elif sapops == "KillAll":
         logging.info('Killing the processes with '+sid+'adm user.')
-        logging.info('Command: '+'killall -u '+sid.lower()+'adm')
+        logging.info('Command: '+'sudo killall -u '+sid.lower()+'adm')
         rc = run_remote_command(ipaddress, adminuser, privatekey, "sudo killall -u "+sid.lower()+"adm")
         if rc != 0:
+            logging.error('Error in killing prcesses with '+sid+'adm user.')
             return func.HttpResponse(
                 "Error in killing prcesses with "+sid+"adm user.",
                 status_code=400
             )
-        
+    
+    logging.info(sapops+' Operation has been executed successfully for '+sid+'.')        
     return func.HttpResponse(
         f" {sapops} Operation has been executed successfully for {sid}.",
         status_code=200

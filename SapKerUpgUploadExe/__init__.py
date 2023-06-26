@@ -34,6 +34,9 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Container: '+container)
     logging.info('SASCred: '+sascred)
     logging.info('IpAddress: '+ipaddress)
+    logging.info('SID: '+sid)
+    logging.info('SAPExeFiles: '+sapexefiles)
+    logging.info('SAPCarFile: '+sapcarfile)
           
     accounturl = "https://"+accountname+".blob.core.windows.net"
     logging.info('AccountURL: '+accounturl)
@@ -53,9 +56,12 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         download_stream = blob_client.download_blob()
         sample_blob.write(download_stream.readall())
     
+    # Convert the ssh key to paramiko format.
+    logging.info('Converting the ssh key to paramiko format.')
     parasshkey = sshkey.replace("\r\n","\n")
     privatekeyfile = StringIO(parasshkey)
     privatekey = paramiko.RSAKey.from_private_key(privatekeyfile)
+    
     # Upload the kernel files to remote host.
     client = paramiko.client.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -73,6 +79,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         if returncode != 0:
             sftp.close()
             client.close()
+            logging.error('Error Uploading file '+sapexefile+' to remote host.')
             return func.HttpResponse(
                 "Error in backing up the kernel.",
                 status_code=400
@@ -88,24 +95,16 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     if returncode != 0:
         sftp.close()
         client.close()
+        logging.error('Error Uploading file '+sapcarfile+' to remote host.')
         return func.HttpResponse(
             "Error in backing up the kernel.",
             status_code=400
         )    
     sftp.close()
-    returncode = stdout.channel.recv_exit_status()
-    outlines = stdout.readlines()
-    resps = ''.join(outlines)
-    for resp in resps.splitlines():
-        logging.info(resp)
-    if returncode != 0:
-        return func.HttpResponse(
-            "Error in backing up the kernel.",
-            status_code=400
-        )
     client.close()
 
+    logging.info('Kernel files uploaded successfully.')
     return func.HttpResponse(
-        "Pre-Steps completed successfully.",
+        "Kernel files uploaded successfully.",
         status_code=200
     )
