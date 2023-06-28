@@ -38,7 +38,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     remotecommandclient.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     remotecommandclient.connect(ipaddress, username=adminuser, pkey=privatekey)
     logging.info("Command: sudo tar cvf /tmp/sapkernelbackup.tar.gz /sapmnt/"+sid+"/exe/uc/linuxx86_64")
-    stdin, stdout, stderr = remotecommandclient.exec_command("sudo tar cvf /tmp/sapkernelbackup.tar.gz /sapmnt/"+sid+"/exe/uc/linuxx86_64", get_pty=True)
+    stdin, stdout, stderr = remotecommandclient.exec_command("sudo tar cvf /tmp/sapkernelbackup.tar.gz /sapmnt/"+sid+"/exe/uc/linuxx86_64/*", get_pty=True)
     returncode = stdout.channel.recv_exit_status()
     outlines = stdout.readlines()
     resps = ''.join(outlines)
