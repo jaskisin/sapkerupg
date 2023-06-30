@@ -38,7 +38,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     remotecommandclient.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     remotecommandclient.connect(ipaddress, username=adminuser, pkey=privatekey)
     logging.info("Command: sudo cp -rp /sapmnt/"+sid+"/exe/uc/linuxx86_64 /sapmnt/"+sid+"/exe/uc/linuxx86_64_bkp")
-    stdin, stdout, stderr = remotecommandclient.exec_command("sudo cp -rp /sapmnt/"+sid+"/exe/uc/linuxx86_64 /sapmnt/"+sid+"/exe/uc/linuxx86_64_bkp", get_pty=True)
+    stdin, stdout, stderr = remotecommandclient.exec_command("sudo su - root -c \"cp -rp /sapmnt/"+sid+"/exe/uc/linuxx86_64 /sapmnt/"+sid+"/exe/uc/linuxx86_64_bkp\"", get_pty=True)
     returncode = stdout.channel.recv_exit_status()
     outlines = stdout.readlines()
     resps = ''.join(outlines)
