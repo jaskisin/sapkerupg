@@ -28,7 +28,6 @@ jobs:
 
       - name: Create and start virtual environment
         run: |
-          pip install --upgrade pip
           python -m venv venv
           source venv/bin/activate
 
@@ -53,11 +52,6 @@ jobs:
       url: ${{ steps.deploy-to-function.outputs.webapp-url }}
 
     steps:
-      - name: Login to Azure
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
       - name: Download artifact from build job
         uses: actions/download-artifact@v2
         with:
@@ -71,5 +65,6 @@ jobs:
           app-name: 'sapkerupg'
           slot-name: 'Production'
           package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_B431A28E18B44C7789E3B63E3344C28E }}
           scm-do-build-during-deployment: true
           enable-oryx-build: true

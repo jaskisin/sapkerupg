@@ -24,7 +24,8 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         sascred = req_body.get('SASCred')
         sapexefiles = req_body.get('SAPExeFiles')
         sapcarfile = req_body.get('SAPCarFile')
-        host = req_body.get('hostname')
+        ipaddress = req_body.get('IpAddress')
+        adminuser = req_body.get('AdminUserName')
         sshkey = req_body.get('sshkey')
         sid = req_body.get('SID')
         
@@ -32,7 +33,10 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('AccountName: '+accountname)
     logging.info('Container: '+container)
     logging.info('SASCred: '+sascred)
-    logging.info('hostname: '+host)
+    logging.info('IpAddress: '+ipaddress)
+    logging.info('SID: '+sid)
+    logging.info('SAPExeFiles: '+sapexefiles)
+    logging.info('SAPCarFile: '+sapcarfile)
           
     accounturl = "https://"+accountname+".blob.core.windows.net"
     logging.info('AccountURL: '+accounturl)
@@ -52,41 +56,55 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         download_stream = blob_client.download_blob()
         sample_blob.write(download_stream.readall())
     
+    # Convert the ssh key to paramiko format.
+    logging.info('Converting the ssh key to paramiko format.')
     parasshkey = sshkey.replace("\r\n","\n")
     privatekeyfile = StringIO(parasshkey)
     privatekey = paramiko.RSAKey.from_private_key(privatekeyfile)
+    
     # Upload the kernel files to remote host.
     client = paramiko.client.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect(host, username='azureuser', pkey=privatekey)
+    client.connect(ipaddress, username=adminuser, pkey=privatekey)
     sftp = client.open_sftp()
     for sapexefile in sapexefiles.split(','):
         logging.info('Uploading file '+sapexefile+' to remote host.')
         sftp.put("/tmp/"+sapexefile, "/tmp/"+sapexefile)
+        stdin, stdout, stderr = client.exec_command("sudo cp /tmp/"+sapexefile+" /sapmnt/"+sid+"/"+sapexefile, get_pty=True)
+        returncode = stdout.channel.recv_exit_status()
+        outlines = stdout.readlines()
+        resps = ''.join(outlines)
+        for resp in resps.splitlines():
+            logging.info(resp)
+        if returncode != 0:
+            sftp.close()
+            client.close()
+            logging.error('Error Uploading file '+sapexefile+' to remote host.')
+            return func.HttpResponse(
+                "Error in backing up the kernel.",
+                status_code=400
+            )
     logging.info('Uploading file '+sapcarfile+' to remote host.')
     sftp.put("/tmp/"+sapcarfile, "/tmp/"+sapcarfile)
-    sftp.close()
-    client.close()
-    
-    # Backup the kernel.
-    logging.info('Backing up the kernel.')
-    remotecommandclient = paramiko.client.SSHClient()
-    remotecommandclient.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    remotecommandclient.connect(host, username='azureuser', pkey=privatekey)
-    stdin, stdout, stderr = remotecommandclient.exec_command("sudo tar -cvf /tmp/sapkernelbackup.tar.gz /sapmnt/"+sid+"/exe/uc/linuxx86_64", get_pty=True)
+    stdin, stdout, stderr = client.exec_command("sudo cp /tmp/"+sapcarfile+" /sapmnt/"+sid+"/"+sapcarfile, get_pty=True)
     returncode = stdout.channel.recv_exit_status()
     outlines = stdout.readlines()
     resps = ''.join(outlines)
     for resp in resps.splitlines():
         logging.info(resp)
-    remotecommandclient.close()
     if returncode != 0:
+        sftp.close()
+        client.close()
+        logging.error('Error Uploading file '+sapcarfile+' to remote host.')
         return func.HttpResponse(
             "Error in backing up the kernel.",
             status_code=400
-        )
+        )    
+    sftp.close()
+    client.close()
 
+    logging.info('Kernel files uploaded successfully.')
     return func.HttpResponse(
-        "Pre-Steps completed successfully.",
+        "Kernel files uploaded successfully.",
         status_code=200
     )
