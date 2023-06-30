@@ -2,12 +2,12 @@
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 # More info on Python, GitHub Actions, and Azure Functions: https://aka.ms/python-webapps-actions
 
-name: Build and deploy Python project to Azure Function App - sapkerupg
+name: Build and deploy Python project to Azure Function App - sapkerupg1
 
 on:
   push:
     branches:
-      - main
+      - sapkerupg-1.0
   workflow_dispatch:
 
 env:
@@ -28,6 +28,7 @@ jobs:
 
       - name: Create and start virtual environment
         run: |
+          pip install --upgrade pip
           python -m venv venv
           source venv/bin/activate
 
@@ -52,6 +53,11 @@ jobs:
       url: ${{ steps.deploy-to-function.outputs.webapp-url }}
 
     steps:
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
       - name: Download artifact from build job
         uses: actions/download-artifact@v2
         with:
@@ -62,9 +68,8 @@ jobs:
         uses: Azure/functions-action@v1
         id: deploy-to-function
         with:
-          app-name: 'sapkerupg'
+          app-name: 'sapkerupg1'
           slot-name: 'Production'
           package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_B431A28E18B44C7789E3B63E3344C28E }}
           scm-do-build-during-deployment: true
           enable-oryx-build: true
