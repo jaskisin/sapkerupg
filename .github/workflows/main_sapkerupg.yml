@@ -2,12 +2,12 @@
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 # More info on Python, GitHub Actions, and Azure Functions: https://aka.ms/python-webapps-actions
 
-name: Build and deploy Python project to Azure Function App - sapkerupg
+name: Build and deploy Python project to Azure Function App - sapkerupg1
 
 on:
   push:
     branches:
-      - main
+      - sapkerupg-1.0
   workflow_dispatch:
 
 env:
