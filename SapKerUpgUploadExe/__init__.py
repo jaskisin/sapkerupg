@@ -70,7 +70,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     for sapexefile in sapexefiles.split(','):
         logging.info('Uploading file '+sapexefile+' to remote host.')
         sftp.put("/tmp/"+sapexefile, "/tmp/"+sapexefile)
-        stdin, stdout, stderr = client.exec_command("sudo cp /tmp/"+sapexefile+" /sapmnt/"+sid+"/"+sapexefile, get_pty=True)
+        stdin, stdout, stderr = client.exec_command("sudo mv /tmp/"+sapexefile+" /sapmnt/"+sid+"/"+sapexefile, get_pty=True)
         returncode = stdout.channel.recv_exit_status()
         outlines = stdout.readlines()
         resps = ''.join(outlines)
