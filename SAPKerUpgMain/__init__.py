@@ -45,7 +45,20 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     for sapexefile in sapexefiles.split(','):
         command += " /sapmnt/"+sid+"/"+sapexefile
     logging.info("Command: sudo chmod 777 /sapmnt/"+sid+"/"+sapcarfile+command)
-    stdin, stdout, stderr = remote_command_client.exec_command("sudo chmod 777 /sapmnt/"+sid+"/"+sapcarfile+command, get_pty=True)
+    # stdin, stdout, stderr = remote_command_client.exec_command("sudo su - root -c \"chmod 777 /sapmnt/"+sid+"/"+sapcarfile+command+"\"", get_pty=True)
+    stdin, stdout, stderr = remote_command_client.exec_command("sudo su - root -c \"chmod 777 /sapmnt/"+sid+"/"+sapcarfile+"\"", get_pty=True)
+    returncode = stdout.channel.recv_exit_status()
+    outlines = stdout.readlines()
+    resps = ''.join(outlines)
+    for resp in resps.splitlines():
+        logging.info(resp)
+    if returncode != 0:
+        logging.error("permission denied for "+sapcarfile+" file.")
+        return func.HttpResponse(
+            "permission denied for "+sapcarfile+" file.",
+            status_code=400
+        )
+           
     logging.info('Extracting the kernel.')
     for sapexefile in sapexefiles.split(','):
         logging.info("Command: sudo su - "+sid.lower()+"adm -c \"/sapmnt/"+sid+"/"+sapcarfile+" -xvf /sapmnt/"+sid+"/"+sapexefile+" -R /sapmnt/"+sid+"/exe/uc/linuxx86_64\"")
