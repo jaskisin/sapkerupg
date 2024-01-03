@@ -15,10 +15,6 @@ Param
     [Parameter (Mandatory= $true)]
     [String] $SAPExeFiles,
 
-    # [String] $SAPExeDBFile,
-
-    # [String] $SAPERSFile,
-
     [Parameter (Mandatory= $true)]
     [String] $SAPCarFile,
 
@@ -38,16 +34,11 @@ catch {
 
 $ErrorActionPreference = "Stop"
 "Getting Request URIs..."
-$requesturibackupexe = "https://sapkerupg.azurewebsites.net/api/SapKerUpgBackupExe?code=XSNIttwbaNYpqfp5Y5hOlPIsL_zeCTyFn6btW-4yH4U6AzFuyxq7wQ=="
-$requesturiuploadexe = "https://sapkerupg.azurewebsites.net/api/SapKerUpgUploadExe?code=QghiVcaRV4t2CuqM2typpi0NMObFd-DsdelHY6W5A8FBAzFutOYtGA=="
-$requesturimain = "https://sapkerupg.azurewebsites.net/api/SAPKerUpgMain?code=20CY-q4Cd0ZTBvXuU6xEG7BRJvYlJVM9Cl34ZJ-ptwYJAzFurkyLCw=="
-$requesturipoststeps = "https://sapkerupg.azurewebsites.net/api/SAPKerUpgPostSteps?code=1SByLrgYXnZw7jmGa3QgyVtHOCT0IRKZtBmxLRGJAP7fAzFu62K9_g=="
-$requesturisapops = "https://sapkerupg.azurewebsites.net/api/SAPKerUpgSAPOps?code=T1BsiSKxzGPWDGLd592gce4MYreV4yiR6P08OWXnmPEmAzFulPoV5A=="
-# $requesturibackupexe = "https://sapkerupg1.azurewebsites.net/api/SapKerUpgBackupExe?code=OteL6pchPhS4vS0Fd8KCRP8g6o_OeULKOWwT-Lu3cYTcAzFu89D2iw=="
-# $requesturiuploadexe = "https://sapkerupg1.azurewebsites.net/api/SapKerUpgUploadExe?code=rKRnwLBB6IXIBd-5bJcT7zetWt36eOTx-183yTx7I504AzFuCKf7qw=="
-# $requesturimain = "https://sapkerupg1.azurewebsites.net/api/SAPKerUpgMain?code=AI5EUXP-UQMCY3fAKNl-KlzjcFx5zd7UHvY-4YlYOabDAzFu7qXPag=="
-# $requesturipoststeps = "https://sapkerupg1.azurewebsites.net/api/SAPKerUpgPostSteps?code=ZirHyAaWHcrrD4Bej0c80pAIQulwrTEXCml_2SwH6MchAzFuO1etoQ=="
-# $requesturisapops = "https://sapkerupg1.azurewebsites.net/api/SAPKerUpgSAPOps?code=uDYxZvTXQxTUrT4EhjhtdZjRYprNF4sAOw4lpndHEZgtAzFun_LbPw=="
+$requesturibackupexe = "<Function URL for SapKerUpgBackupExe>"
+$requesturiuploadexe = "<Function URL for SapKerUpgUploadExe>"
+$requesturimain = "<Function URL for SapKerUpgMain>"
+$requesturipoststeps = "<Function URL for SapKerUpgPostSteps>"
+$requesturisapops = "<Function URL for SAPKerUpgSAPOps>"
 "Fetching SAP Virtual Instances..."
 $allvis = Get-AzWorkloadsSapVirtualInstance
 "Getting SAS Credential..."
@@ -57,16 +48,6 @@ ForEach ( $SAPSID in $SAPSIDs)
     # Variables
     "Getting VIS Details..."
     $vis = $allvis | Where-Object {$_.Name -eq $SAPSID}
-    $VISDeploymentType = ($vis.Configuration | ConvertFrom-Json).infrastructureConfiguration.deploymentType
-    "Found VIS Deployment Type:  $VISDeploymentType"
-    if ($VISDeploymentType -eq "SingleServer")
-    {
-        $VISDeploymentAdminUser = ($vis.Configuration | ConvertFrom-Json).infrastructureConfiguration.virtualMachineConfiguration.osProfile.adminUsername
-    }
-    else
-    {
-        $VISDeploymentAdminUser = ($vis.Configuration | ConvertFrom-Json).infrastructureConfiguration.centralServer.virtualMachineConfiguration.osProfile.adminUsername
-    }
     "Found VIS Admin User"
     $VISResourceGroup = $vis.ResourceGroupName
     "Found VIS Resource Group:  $VISResourceGroup"
@@ -74,12 +55,8 @@ ForEach ( $SAPSID in $SAPSIDs)
     "Found VIS Name:  $VISName"
     $VISManagedResourceGroupName = $vis.ManagedResourceGroupConfigurationName
     "Found VIS Managed Resource Group:  $VISManagedResourceGroupName"
-    # $VISManagedStorageAccount = (Get-AzStorageAccount -ResourceGroupName $VISManagedResourceGroupName).StorageAccountName
     $VISKeyVault = (Get-AzKeyVault -ResourceGroupName $VISManagedResourceGroupName).VaultName
     "Found VIS Key Vault:  $VISKeyVault"
-    "Allowing application to access VIS Key Vault..."
-    $AppObjID = (Get-AzADServicePrincipal -ApplicationId $MSIApplicationID).Id
-    $null = Set-AzKeyVaultAccessPolicy -VaultName $VISKeyVault -ObjectId $AppObjID -PermissionsToSecrets Get,Set,Delete
     "Getting VIS SSH Key..."
     $VISsshKey = Get-AzKeyVaultSecret -VaultName $VISKeyVault -Name "$VISNAME-sid-sshkey" -AsPlainText
     "Getting VIS Message Server Details..."
@@ -94,10 +71,30 @@ ForEach ( $SAPSID in $SAPSIDs)
     "Getting VIS Application Server Details..."
     $VISAPPs = Get-AzWorkloadsSapApplicationInstance -ResourceGroupName $VISResourceGroup -SapVirtualInstanceName $VISName
 
+    if ($VISCS.VMDetail.Count -gt 1) {
+        $VISDeploymentType = "HighAvailability"
+    }
+    elseif (($VISCS.VMDetail.VirtualMachineId | Select-Object -First 1) -eq ($VISAPPs.VMDetail.VirtualMachineId | Select-Object -First 1)) {
+        $VISDeploymentType = "SingleServer"
+    }
+    else {
+        $VISDeploymentType = "Distributed"
+    }
+
+    "Found VIS Deployment Type:  $VISDeploymentType"
+    if ($VISDeploymentType -eq "SingleServer")
+    {
+        $VISDeploymentAdminUser = ($vis.Configuration | ConvertFrom-Json).infrastructureConfiguration.virtualMachineConfiguration.osProfile.adminUsername
+    }
+    else
+    {
+        $VISDeploymentAdminUser = ($vis.Configuration | ConvertFrom-Json).infrastructureConfiguration.centralServer.virtualMachineConfiguration.osProfile.adminUsername
+    }
+    "Found VIS Admin User"
     # Backup exe
     $requesturibackupexeinputobj = @{IpAddress=$VISmsIp;sshkey=$VISsshKey;SID=$VISName;AdminUserName=$VISDeploymentAdminUser}
     $requesturibackupexeinputjson = $requesturibackupexeinputobj | ConvertTo-Json
-    "Backing up the Current SAP Kernel"
+    "Backing up the Current SAP Kernel to location /sapmnt/$SAPSID/exe/uc/linuxx86_64.tar"
     try {
         $responseuribackupexe = Invoke-WebRequest $requesturibackupexe -Body $requesturibackupexeinputjson -Method 'POST' -UseBasicParsing
         $StatusCode = $responseuribackupexe.StatusCode
@@ -110,7 +107,7 @@ ForEach ( $SAPSID in $SAPSIDs)
     # Upload exe
     $requesturiuploadexeinputobj = @{AccountName=$BitsStorageAccountName;Container=$BitsStorageContainerName;SASCred=$SASCredential;SAPExeFiles=$SAPExeFiles;SAPCarFile=$SAPCarFile;IpAddress=$VISmsIp;sshkey=$VISsshKey;SID=$VISName;AdminUserName=$VISDeploymentAdminUser}
     $requesturiuploadexeinputjson = $requesturiuploadexeinputobj | ConvertTo-Json
-    "Uploading new SAR files to the host"
+    "Uploading new SAR files to the SAP host"
     try {
         $responseuploadexe = Invoke-WebRequest $requesturiuploadexe -Body $requesturiuploadexeinputjson -Method 'POST' -UseBasicParsing
         $StatusCode = $responseuploadexe.StatusCode
@@ -127,11 +124,8 @@ ForEach ( $SAPSID in $SAPSIDs)
         $VISapphost = $VISAPP.Hostname
         $VISappname = $VISAPP.Name
         # Stop app
-        # $requesturisapopsinputstopappobj = @{IpAddress=$VISappIp;sshkey=$VISsshKey;SID=$VISName;AdminUserName=$VISDeploymentAdminUser;SAPOperation="Stop";SysNr=$VISappsysnr}
-        # $requesturisapopsinputstopappjson = $requesturisapopsinputstopappobj | ConvertTo-Json
-        "Stopping Application Server Instance"
+        "Stopping Application Server Instance on host $VISapphost"
         try {
-            # $responsesapopstopapp = Invoke-WebRequest $requesturisapops -Body $requesturisapopsinputstopappjson -Method 'POST' -UseBasicParsing
             $responsesapopstopapp = Stop-AzWorkloadsSapApplicationInstance -ResourceGroupName $VISResourceGroup -SapVirtualInstanceName $VISName -Name $VISappname
             $StatusCode = $responsesapopstopapp.Status
             "Stopping of Application server completed successfully for $VISName with status $StatusCode"
@@ -141,9 +135,9 @@ ForEach ( $SAPSID in $SAPSIDs)
         }
     
         # Stop app service
-        $requesturisapopsinputstopsrvappobj = @{IpAddress=$VISappIp;sshkey=$VISsshKey;SID=$VISName;AdminUserName=$VISDeploymentAdminUser;SAPOperation="StopService";SysNr=$VISappsysnr}
+        $requesturisapopsinputstopsrvappobj = @{IpAddress=$VISappIp;sshkey=$VISsshKey;SID=$VISName;AdminUserName=$VISDeploymentAdminUser;SAPOperation="StopService";SysNr=$VISappsysnr;SysType="D"}
         $requesturisapopsinputstopsrvappjson = $requesturisapopsinputstopsrvappobj | ConvertTo-Json
-        "Stopping Application Server Service"
+        "Stopping Application Server Service on host $VISapphost"
         try {
             $responsesapopstopsrvapp = Invoke-WebRequest $requesturisapops -Body $requesturisapopsinputstopsrvappjson -Method 'POST' -UseBasicParsing
             $StatusCode = $responsesapopstopsrvapp.StatusCode
@@ -152,28 +146,20 @@ ForEach ( $SAPSID in $SAPSIDs)
         catch {
             throw $_.Exception.Response.StatusCode.value__
         }
-
+        
+        if ($VISDeploymentType -ne "SingleServer") {
            # kill sidadm process
-        $requesturisapopsinputstopforceobj = @{IpAddress=$VISappIp;sshkey=$VISsshKey;SID=$VISName;AdminUserName=$VISDeploymentAdminUser;SAPOperation="KillAll";SysNr=$VISappsysnr}
+        $requesturisapopsinputstopforceobj = @{IpAddress=$VISappIp;sshkey=$VISsshKey;SID=$VISName;AdminUserName=$VISDeploymentAdminUser;SAPOperation="KillAll";SysNr=$VISappsysnr;SysType="D"}
         $requesturisapopsinputstopforcejson = $requesturisapopsinputstopforceobj | ConvertTo-Json
-        "Killing remaining sidadm process"
-        # try {
+        "Killing remaining sidadm process on host $VISapphost"
             $responsesapopstopforce = Invoke-WebRequest $requesturisapops -Body $requesturisapopsinputstopforcejson -Method 'POST' -UseBasicParsing -ErrorAction SilentlyContinue
             $StatusCode = $responsesapopstopforce.StatusCode
             "Killing of sidadm process completed for $VISName with status code $StatusCode"
-        # }
-        # catch {
-        #     throw $_.Exception.Response.StatusCode.value__
-        # } 
+        }
     }
 
-
-    # Stop ms
-    # $requesturisapopsinputstopmsobj = @{IpAddress=$VISmsIp;sshkey=$VISsshKey;SID=$VISName;AdminUserName=$VISDeploymentAdminUser;SAPOperation="Stop";SysNr=$VISmssysnr}
-    # $requesturisapopsinputstopmsjson = $requesturisapopsinputstopmsobj | ConvertTo-Json
-    "Stopping Message Server Instance"
+    "Stopping Message Server Instance on host $VISapphost"
     try {
-        # $responsesapopstopms = Invoke-WebRequest $requesturisapops -Body $requesturisapopsinputstopmsjson -Method 'POST' -UseBasicParsing
         $responsesapopstopms = Stop-AzWorkloadsSapCentralInstance -ResourceGroupName $VISResourceGroup -SapVirtualInstanceName $VISName -Name $VISmsname
         $StatusCode = $responsesapopstopms.Status
         "Stopping of Message server completed successfully for $VISName with status code $StatusCode"
@@ -183,9 +169,9 @@ ForEach ( $SAPSID in $SAPSIDs)
     }
 
     # Stop ms service
-    $requesturisapopsinputstopsrvmsobj = @{IpAddress=$VISmsIp;sshkey=$VISsshKey;SID=$VISName;AdminUserName=$VISDeploymentAdminUser;SAPOperation="StopService";SysNr=$VISmssysnr}
+    $requesturisapopsinputstopsrvmsobj = @{IpAddress=$VISmsIp;sshkey=$VISsshKey;SID=$VISName;AdminUserName=$VISDeploymentAdminUser;SAPOperation="StopService";SysNr=$VISmssysnr;SysType="ASCS"}
     $requesturisapopsinputstopsrvmsjson = $requesturisapopsinputstopsrvmsobj | ConvertTo-Json
-    "Stopping Message Server Service"
+    "Stopping Message Server Service on host $VISapphost"
     try {
         $responsesapopstopsrvms = Invoke-WebRequest $requesturisapops -Body $requesturisapopsinputstopsrvmsjson -Method 'POST' -UseBasicParsing
         $StatusCode = $responsesapopstopsrvms.StatusCode
@@ -197,22 +183,17 @@ ForEach ( $SAPSID in $SAPSIDs)
     
 
    # kill sidadm process
-   $requesturisapopsinputstopforceobj = @{IpAddress=$VISmsIp;sshkey=$VISsshKey;SID=$VISName;AdminUserName=$VISDeploymentAdminUser;SAPOperation="KillAll";SysNr=$VISmssysnr}
+   $requesturisapopsinputstopforceobj = @{IpAddress=$VISmsIp;sshkey=$VISsshKey;SID=$VISName;AdminUserName=$VISDeploymentAdminUser;SAPOperation="KillAll";SysNr=$VISmssysnr;SysType="ASCS"}
    $requesturisapopsinputstopforcejson = $requesturisapopsinputstopforceobj | ConvertTo-Json
-   "Killing remaining sidadm process"
-#    try {
+   "Killing remaining sidadm process on host $VISapphost"
        $responsesapopstopforce = Invoke-WebRequest $requesturisapops -Body $requesturisapopsinputstopforcejson -Method 'POST' -UseBasicParsing -ErrorAction SilentlyContinue
        $StatusCode = $responsesapopstopforce.StatusCode
        "Killing of sidadm process completed for $VISName with status code $StatusCode"
-#    }
-#    catch {
-#          throw $_.Exception.Response.StatusCode.value__
-#    } 
-   
+
    # Main
    $requesturimaininputobj = @{IpAddress=$VISmsIp;sshkey=$VISsshKey;SID=$VISName;AdminUserName=$VISDeploymentAdminUser;SAPExeFiles=$SAPExeFiles;SAPCarFile=$SAPCarFile}
    $requesturimaininputjson = $requesturimaininputobj | ConvertTo-Json
-   "Performing Kernel Upgrade Main Task"
+   "Performing Kernel Upgrade Main Task for $VISName"
    try {
        $responsemain = Invoke-WebRequest $requesturimain -Body $requesturimaininputjson -Method 'POST' -UseBasicParsing
        $StatusCode = $responsemain.StatusCode
@@ -231,7 +212,7 @@ ForEach ( $SAPSID in $SAPSIDs)
         # Post Kernel Upgrade app
         $requesturipostappinputobj = @{IpAddress=$VISappIp;sshkey=$VISsshKey;SID=$VISName;AdminUserName=$VISDeploymentAdminUser;hostname=$VISapphost;SysNr=$VISappsysnr;SysType="DIA"}
         $requesturipostappinputjson = $requesturipostappinputobj | ConvertTo-Json
-        "Post Kernel Upgrade task on application Server"
+        "Post Kernel Upgrade task on application Server on host $VISapphost"
         try {
             $responsepostapp = Invoke-WebRequest $requesturipoststeps -Body $requesturipostappinputjson -Method 'POST' -UseBasicParsing
             $StatusCode = $responsepostapp.StatusCode
@@ -245,7 +226,7 @@ ForEach ( $SAPSID in $SAPSIDs)
     # Post Kernel Upgrade ms
     $requesturipostmsinputobj = @{IpAddress=$VISmsIp;sshkey=$VISsshKey;SID=$VISName;AdminUserName=$VISDeploymentAdminUser;hostname=$VISmshost;SysNr=$VISmssysnr;SysType="ASCS"}
     $requesturipostmsinputjson = $requesturipostmsinputobj | ConvertTo-Json
-    "Post Kernel Upgrade task on Message Server"
+    "Post Kernel Upgrade task on Message Server on host $VISmshost"
     try {
         $responsepostms = Invoke-WebRequest $requesturipoststeps -Body $requesturipostmsinputjson -Method 'POST' -UseBasicParsing
         $StatusCode = $responsepostms.StatusCode
@@ -256,9 +237,9 @@ ForEach ( $SAPSID in $SAPSIDs)
     }
 
     # start ms service
-    $requesturisapopsinputstartsrvmsobj = @{IpAddress=$VISmsIp;sshkey=$VISsshKey;SID=$VISName;AdminUserName=$VISDeploymentAdminUser;SAPOperation="StartService";SysNr=$VISmssysnr}
+    $requesturisapopsinputstartsrvmsobj = @{IpAddress=$VISmsIp;sshkey=$VISsshKey;SID=$VISName;AdminUserName=$VISDeploymentAdminUser;SAPOperation="StartService";SysNr=$VISmssysnr;SysType="ASCS"}
     $requesturisapopsinputstartsrvmsjson = $requesturisapopsinputstartsrvmsobj | ConvertTo-Json
-    "Starting Message Server Service"
+    "Starting Message Server Service on host $VISapphost"
     try {
         $responsesapopstartsrvms = Invoke-WebRequest $requesturisapops -Body $requesturisapopsinputstartsrvmsjson -Method 'POST' -UseBasicParsing
         $StatusCode = $responsesapopstartsrvms.StatusCode
@@ -270,12 +251,8 @@ ForEach ( $SAPSID in $SAPSIDs)
 
     Start-Sleep -s 60
     # start ms
-    # $requesturisapopsinputstartmsobj = @{IpAddress=$VISmsIp;sshkey=$VISsshKey;SID=$VISName;AdminUserName=$VISDeploymentAdminUser;SAPOperation="Start";SysNr=$VISmssysnr}
-    # $requesturisapopsinputstartmsjson = $requesturisapopsinputstartmsobj | ConvertTo-Json
-    "Starting Message Server Instance"
+    "Starting Message Server Instance on host $VISapphost"
     try {
-        # $responsesapopstartms = Invoke-WebRequest $requesturisapops -Body $requesturisapopsinputstartmsjson -Method 'POST' -UseBasicParsing
-        # $StatusCode = $responsesapopstartms.StatusCode
         $responsesapopstartms = Start-AzWorkloadsSapCentralInstance -ResourceGroupName $VISResourceGroup -SapVirtualInstanceName $VISName -Name $VISmsname
         $StatusCode = $responsesapopstartms.Status
         "Starting of Message server completed successfully for $VISName with status code $StatusCode"
@@ -292,9 +269,9 @@ ForEach ( $SAPSID in $SAPSIDs)
         $VISapphost = $VISAPP.Hostname
         $VISappname = $VISAPP.Name
         # Start app service
-        $requesturisapopsinputstartsrvappobj = @{IpAddress=$VISappIp;sshkey=$VISsshKey;SID=$VISName;AdminUserName=$VISDeploymentAdminUser;SAPOperation="StartService";SysNr=$VISappsysnr}
+        $requesturisapopsinputstartsrvappobj = @{IpAddress=$VISappIp;sshkey=$VISsshKey;SID=$VISName;AdminUserName=$VISDeploymentAdminUser;SAPOperation="StartService";SysNr=$VISappsysnr;SysType="D"}
         $requesturisapopsinputstartsrvappjson = $requesturisapopsinputstartsrvappobj | ConvertTo-Json
-        "Starting Application Server Service"
+        "Starting Application Server Service on host $VISapphost"
         try {
             $responsesapopstartsrvapp = Invoke-WebRequest $requesturisapops -Body $requesturisapopsinputstartsrvappjson -Method 'POST' -UseBasicParsing
             $StatusCode = $responsesapopstartsrvapp.StatusCode
@@ -304,12 +281,8 @@ ForEach ( $SAPSID in $SAPSIDs)
             throw $_.Exception.Response.StatusCode.value__
         }
         Start-Sleep -s 60
-        # $requesturisapopsinputstartappobj = @{IpAddress=$VISappIp;sshkey=$VISsshKey;SID=$VISName;AdminUserName=$VISDeploymentAdminUser;SAPOperation="Start";SysNr=$VISappsysnr}
-        # $requesturisapopsinputstartappjson = $requesturisapopsinputstartappobj | ConvertTo-Json
-        "Starting Application Server Instance"
+        "Starting Application Server Instance on host $VISapphost"
         try {
-            # $responsesapopstartapp = Invoke-WebRequest $requesturisapops -Body $requesturisapopsinputstartappjson -Method 'POST' -UseBasicParsing
-            # $StatusCode = $responsesapopstartapp.StatusCode
             $responsesapopstartapp = Start-AzWorkloadsSapApplicationInstance -ResourceGroupName $VISResourceGroup -SapVirtualInstanceName $VISName -Name $VISappname
             $StatusCode = $responsesapopstartapp.Status        
             "Starting of Application server completed successfully for $VISName with status code $StatusCode"
