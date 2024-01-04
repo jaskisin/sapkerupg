@@ -1,0 +1,459 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "ResourcePrefix": {
+        "type": "string",
+        "defaultValue": "sapkernelupgrade",
+        "metadata": {
+          "description":  "The string that will be used as a prefix for all resources in this deployment.  This should be 3-5 characters and contain only lowercase letters and numbers."
+        }
+    },
+    "managedIdentityName": {
+        "type": "string",
+        "defaultValue": "[concat(parameters('ResourcePrefix'), '-msi')]",
+        "metadata": {
+          "description":  "The name of the managed identity to create which will be used to perform Kernel Upgrade."
+        }
+    },
+    "assignRoleToMSI": {
+      "type": "bool",
+      "metadata": {
+        "description": "Required Roles to assign to MSI. Each role assignment is created at the resource group scope. Role definition IDs are GUIDs. To find the GUID for built-in Azure role definitions, see https://docs.microsoft.com/azure/role-based-access-control/built-in-roles. You can also use IDs of custom role definitions."
+      }
+    },
+    "sapbitsStorageAccountName": {
+        "type": "string",
+        "defaultValue": "[concat(parameters('ResourcePrefix'), 'sapbits')]",
+        "metadata": {
+          "description":  "The name of the storage account to create in which sapbits will be stored for automation."
+        }
+    },
+    "sapbitsContainerName": {
+        "type": "string",
+        "defaultValue": "sapbits",
+        "metadata": {
+          "description":  "The name of the storage container to create in which sapbits will be stored for automation.."
+        }
+    },
+    "automationAccountName": {
+        "type": "string",
+        "defaultValue": "[concat(parameters('ResourcePrefix'), 'aa')]",
+        "metadata": {
+          "description":  "The name of the automation account to create."
+        }
+    },
+    "SubnetId": {
+      "type": "string",
+      "metadata": {
+        "description": "Id of the subnet which will be integrated with the function app."
+      }
+    },
+    "functionAppName": {
+        "type": "string",
+        "defaultValue": "[concat(parameters('ResourcePrefix'), 'app')]",
+        "metadata": {
+          "description":  "The name of the function app to create."
+        }
+    }
+  },
+  "functions": [],
+  "variables": {
+    "copy": [
+      {
+        "name": "roleAssignmentsToCreate",
+        "count": "[length(variables('roleDefinitionIds'))]",
+        "input": {
+          "name": "[guid(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName')), resourceGroup().id, variables('roleDefinitionIds')[copyIndex('roleAssignmentsToCreate')])]",
+          "roleDefinitionId": "[variables('roleDefinitionIds')[copyIndex('roleAssignmentsToCreate')]]"
+        }
+      }
+    ],
+    "roleDefinitionIds": [
+        "c12c1c16-33a1-487b-954d-41c89c60f349",
+        "d3881f73-407a-4167-8283-e981cbba0404"
+    ]
+  },
+  "resources": [
+    {
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "apiVersion": "2023-01-31",
+      "name": "[parameters('managedIdentityName')]",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "CreatedFor": "SAPKernelUpgrade"
+      }
+    },
+    {
+      "condition": "[parameters('assignRoleToMSI')]",
+      "copy": {
+        "name": "roleAssignment",
+        "count": "[length(variables('roleAssignmentsToCreate'))]"
+      },
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2020-04-01-preview",
+      "name": "[variables('roleAssignmentsToCreate')[copyIndex()].name]",
+      "properties": {
+        "description": "Role assignment for managed identity to access resources in the resource group",
+        "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName'))).principalId]",
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('roleAssignmentsToCreate')[copyIndex()].roleDefinitionId)]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2022-05-01",
+      "name": "[parameters('sapbitsStorageAccountName')]",
+      "location": "[resourceGroup().location]",
+      "sku": {
+        "name": "Standard_LRS",
+        "tier": "Standard"
+      },
+      "kind": "StorageV2",
+      "properties": {
+        "dnsEndpointType": "Standard",
+        "publicNetworkAccess": "Enabled",
+        "defaultToOAuthAuthentication": true,
+        "allowCrossTenantReplication": false,
+        "minimumTlsVersion": "TLS1_2",
+        "allowBlobPublicAccess": false,
+        "supportsHttpsTrafficOnly": true,
+        "networkAcls": {
+          "bypass": "AzureServices",
+          "virtualNetworkRules": [],
+          "ipRules": [],
+          "defaultAction": "Allow"
+        },
+        "encryption": {
+          "services": {
+              "blob": {
+                  "keyType": "Account",
+                  "enabled": true
+              }
+          },
+          "keySource": "Microsoft.Storage"
+        },
+        "accessTier": "Hot"
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+      "apiVersion": "2022-05-01",
+      "name": "[format('{0}/default/{1}', parameters('sapbitsStorageAccountName'),parameters('sapbitsContainerName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('sapbitsStorageAccountName'))]"
+      ]
+    },
+    {
+    "type": "Microsoft.OperationalInsights/workspaces",
+    "apiVersion": "2020-08-01",
+    "name": "[concat('la-',parameters('automationAccountName'))]",
+    "location": "[resourceGroup().location]",
+    "properties": {
+      "sku": {
+        "name": "PerGB2018"
+      },
+      "retentionInDays": 30,
+      "features": {
+        "searchVersion": 1,
+        "legacy": 0
+      }
+    }
+  },
+    {
+    "type": "Microsoft.Automation/automationAccounts",
+    "apiVersion": "2022-08-08",
+    "name": "[parameters('automationAccountName')]",
+    "location": "[resourceGroup().location]",
+    "dependsOn": [
+      "[concat('la-',parameters('automationAccountName'))]",
+      "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName'))]"
+    ],
+    "identity": {
+      "type": "SystemAssigned, UserAssigned",
+      "userAssignedIdentities": {
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName'))]": {}
+      }
+    },
+    "properties": {
+      "sku": {
+        "name": "Basic"
+      }
+    },
+    "resources": [
+      {
+        "type": "runbooks",
+        "apiVersion": "2022-08-08",
+        "name": "[parameters('ResourcePrefix')]",
+        "location": "[resourceGroup().location]",
+        "dependsOn": [
+          "[parameters('automationAccountName')]"
+        ],
+        "properties": {
+          "runbookType": "PowerShell",
+          "logProgress": false,
+          "logVerbose": false,
+          "description": "This runbook is used to deploy SAP Kernel Upgrade",
+          "publishContentLink": {
+            "uri": "https://raw.githubusercontent.com/jaskisin/sapkerupg/sapkerupg-1.0/sapkernelupgrade.ps1",
+            "version": "1.0.0.0"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "type": "Microsoft.OperationalInsights/workspaces/linkedServices",
+    "apiVersion": "2020-08-01",
+    "name": "[concat('la-',parameters('automationAccountName'), '/' , 'Automation')]",
+    "location": "[resourceGroup().location]",
+    "dependsOn": [
+      "[concat('la-',parameters('automationAccountName'))]",
+      "[parameters('automationAccountName')]"
+    ],
+    "properties": {
+      "resourceId": "[resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName'))]"
+    }
+  },
+      {
+    "type": "Microsoft.Storage/storageAccounts",
+    "apiVersion": "2022-05-01",
+    "name": "[concat('st',parameters('functionAppName'))]",
+    "location": "[resourceGroup().location]",
+    "sku": {
+        "name": "Standard_LRS",
+        "tier": "Standard"
+      },
+    "kind": "StorageV2",
+    "properties": {
+      "minimumTlsVersion": "TLS1_2",
+      "allowBlobPublicAccess": false,
+      "supportsHttpsTrafficOnly": true
+    }
+  },
+  {
+    "type": "Microsoft.OperationalInsights/workspaces",
+    "apiVersion": "2021-06-01",
+    "name": "[concat('log-',parameters('functionAppName'))]",
+    "location": "[resourceGroup().location]",
+    "properties": {
+      "sku": {
+        "name": "PerGB2018"
+      }
+    }
+  },
+  {
+    "type": "Microsoft.Insights/components",
+    "apiVersion": "2020-02-02",
+    "name": "[concat('ai-',parameters('functionAppName'))]",
+    "location": "[resourceGroup().location]",
+    "kind": "web",
+    "properties": {
+      "Application_Type": "web",
+      "Flow_Type": "Bluefield",
+      "Request_Source": "rest",
+      "RetentionInDays": 90,
+      "WorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', concat('log-',parameters('functionAppName')))]",
+      "IngestionMode": "LogAnalytics",
+      "publicNetworkAccessForIngestion": "Enabled",
+      "publicNetworkAccessForQuery": "Enabled"
+    },
+    "dependsOn": [
+      "[resourceId('Microsoft.OperationalInsights/workspaces', concat('log-',parameters('functionAppName')))]"
+    ]
+  },
+  {
+    "type": "Microsoft.Web/serverfarms",
+    "apiVersion": "2022-03-01",
+    "name": "[concat('asp-',parameters('functionAppName'))]",
+    "location": "[resourceGroup().location]",
+    "sku": {
+      "name": "EP1",
+      "tier": "ElasticPremium",
+      "size": "EP1",
+      "family": "EP",
+      "capacity": 1
+    },
+    "kind": "elastic",
+    "properties": {
+      "perSiteScaling": false,
+      "elasticScaleEnabled": true,
+      "maximumElasticWorkerCount": 20,
+      "isSpot": false,
+      "reserved": true,
+      "isXenon": false,
+      "hyperV": false,
+      "targetWorkerCount": 0,
+      "targetWorkerSizeId": 0,
+      "zoneRedundant": false
+    }
+  },
+  {
+    "type": "Microsoft.Web/sites",
+    "apiVersion": "2022-03-01",
+    "name": "[parameters('functionAppName')]",
+    "location": "[resourceGroup().location]",
+    "kind": "functionapp,linux",
+    "identity": {
+      "type": "SystemAssigned, UserAssigned",
+      "userAssignedIdentities": {
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName'))]": {}
+      }
+    },
+    "properties": {
+      "enabled": true,
+      "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', concat('asp-',parameters('functionAppName')))]",
+      "httpsOnly": true,
+      "virtualNetworkSubnetId": "[parameters('SubnetId')]",
+      "siteConfig": {
+        "appSettings": [
+          {
+            "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+            "value": "[reference(resourceId('Microsoft.Insights/components', concat('ai-',parameters('functionAppName'))), '2020-02-02').InstrumentationKey]"
+          },
+          {
+            "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+            "value": "[format('InstrumentationKey={0}', reference(resourceId('Microsoft.Insights/components', concat('ai-',parameters('functionAppName'))), '2020-02-02').InstrumentationKey)]"
+          },
+          {
+            "name": "AzureWebJobsStorage",
+            "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};EndpointSuffix={1};AccountKey={2}', concat('st',parameters('functionAppName')), environment().suffixes.storage, listKeys(resourceId('Microsoft.Storage/storageAccounts', concat('st',parameters('functionAppName'))), '2022-05-01').keys[0].value)]"
+          },
+          {
+            "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
+            "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};EndpointSuffix={1};AccountKey={2}', concat('st',parameters('functionAppName')), environment().suffixes.storage, listKeys(resourceId('Microsoft.Storage/storageAccounts', concat('st',parameters('functionAppName'))), '2022-05-01').keys[0].value)]"
+          },
+          {
+            "name": "WEBSITE_CONTENTSHARE",
+            "value": "[toLower(parameters('functionAppName'))]"
+          },
+          {
+            "name": "FUNCTIONS_EXTENSION_VERSION",
+            "value": "~4"
+          },
+          {
+            "name": "WEBSITE_RUN_FROM_PACKAGE",
+            "value": "https://github.com/jaskisin/sapkerupg/raw/sapkerupg-1.0/sapkerupg.zip"
+          },
+          {
+            "name": "FUNCTIONS_WORKER_RUNTIME",
+            "value": "python"
+          },
+          {
+            "name": "ENABLE_ORYX_BUILD",
+            "value": "true"
+          },
+          {
+            "name": "SCM_DO_BUILD_DURING_DEPLOYMENT",
+            "value": "false"
+          },
+          {
+            "name": "BUILD_FLAGS",
+            "value": "UseExpressBuild"
+          },
+          {
+            "name": "XDG_CACHE_HOME",
+            "value": "/tmp/.cache"
+          }
+        ],
+        "linuxFxVersion": "Python|3.10",
+        "acrUseManagedIdentityCreds": false,
+        "alwaysOn": false,
+        "http20Enabled": false,
+        "functionAppScaleLimit": 0,
+        "minimumElasticInstanceCount": 1,
+        "numberOfWorkers": 1
+      },
+      "hostNameSslStates": [
+        {
+            "name": "[concat(parameters('functionAppName'), '.azurewebsites.net')]",
+            "sslState": "Disabled",
+            "hostType": "Standard"
+        },
+        {
+            "name": "[concat(parameters('functionAppName'), '.scm.azurewebsites.net')]",
+            "sslState": "Disabled",
+            "hostType": "Repository"
+        }
+      ],
+      "reserved": true,
+      "isXenon": false,
+      "hyperV": false,
+      "vnetRouteAllEnabled": true,
+      "vnetImagePullEnabled": false,
+      "vnetContentShareEnabled": false,
+      "scmSiteAlsoStopped": false,
+      "clientAffinityEnabled": false,
+      "clientCertEnabled": false,
+      "clientCertMode": "Required",
+      "hostNamesDisabled": false,
+      "containerSize": 1536,
+      "dailyMemoryTimeQuota": 0,
+      "redundancyMode": "None",
+      "publicNetworkAccess": "Enabled",
+      "storageAccountRequired": false,
+      "keyVaultReferenceIdentity": "SystemAssigned"
+    },
+    "dependsOn": [
+      "[resourceId('Microsoft.Insights/components', concat('ai-',parameters('functionAppName')))]",
+      "[resourceId('Microsoft.Web/serverfarms', concat('asp-',parameters('functionAppName')))]",
+      "[resourceId('Microsoft.Storage/storageAccounts', concat('st', parameters('functionAppName')))]"
+    ]
+  },
+  {
+    "type": "Microsoft.Web/sites/basicPublishingCredentialsPolicies",
+    "apiVersion": "2022-09-01",
+    "name": "[concat(parameters('functionAppName'), '/ftp')]",
+    "location": "East US",
+    "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"
+    ],
+    "properties": {
+        "allow": false
+    }
+  },
+  {
+      "type": "Microsoft.Web/sites/basicPublishingCredentialsPolicies",
+      "apiVersion": "2022-09-01",
+      "name": "[concat(parameters('functionAppName'), '/scm')]",
+      "location": "East US",
+      "dependsOn": [
+          "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"
+      ],
+      "properties": {
+          "allow": false
+      }
+  },
+  {
+    "type": "Microsoft.Automation/automationAccounts/modules",
+    "apiVersion": "2022-08-08",
+    "name": "[concat(parameters('automationAccountName'), '/Az.Accounts')]",
+    "dependsOn": [
+        "[resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName'))]"
+    ],
+    "properties": {
+        "contentLink": {
+          "uri": "https://www.powershellgallery.com/api/v2/package/Az.Accounts/2.12.1"
+        }
+    }
+  },
+  {
+    "type": "Microsoft.Automation/automationAccounts/modules",
+    "apiVersion": "2022-08-08",
+    "name": "[concat(parameters('automationAccountName'), '/Az.Workloads')]",
+    "dependsOn": [
+        "[resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName'))]",
+        "[resourceId('Microsoft.Automation/automationAccounts/modules', parameters('automationAccountName'), 'Az.Accounts')]"
+    ],
+    "properties": {
+        "contentLink": {
+          "uri": "https://www.powershellgallery.com/api/v2/package/Az.Workloads/0.1.0"
+        }
+    }
+  }
+  ],
+  "outputs": {}
+}
