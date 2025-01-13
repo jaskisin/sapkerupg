@@ -22,18 +22,18 @@
         "description": "Required Roles to assign to MSI. Each role assignment is created at the resource group scope. Role definition IDs are GUIDs. To find the GUID for built-in Azure role definitions, see https://docs.microsoft.com/azure/role-based-access-control/built-in-roles. You can also use IDs of custom role definitions."
       }
     },
-    "sapbitsStorageAccountName": {
+    "sapMediaStorageAccountName": {
         "type": "string",
-        "defaultValue": "[concat(parameters('ResourcePrefix'), 'sapbits')]",
+        "defaultValue": "[concat(parameters('ResourcePrefix'), 'sapmedia')]",
         "metadata": {
-          "description":  "The name of the storage account to create in which sapbits will be stored for automation."
+          "description":  "The name of the storage account to create in which SAP's Kernel Media will be stored for automation."
         }
     },
-    "sapbitsContainerName": {
+    "sapMediaContainerName": {
         "type": "string",
-        "defaultValue": "sapbits",
+        "defaultValue": "sapmedia",
         "metadata": {
-          "description":  "The name of the storage container to create in which sapbits will be stored for automation.."
+          "description":  "The name of the storage container to create in which SAP's Kernel Media will be stored for automation.."
         }
     },
     "automationAccountName": {
@@ -106,7 +106,7 @@
     {
       "type": "Microsoft.Storage/storageAccounts",
       "apiVersion": "2022-05-01",
-      "name": "[parameters('sapbitsStorageAccountName')]",
+      "name": "[parameters('sapMediaStorageAccountName')]",
       "location": "[resourceGroup().location]",
       "sku": {
         "name": "Standard_LRS",
@@ -142,9 +142,9 @@
     {
       "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
       "apiVersion": "2022-05-01",
-      "name": "[format('{0}/default/{1}', parameters('sapbitsStorageAccountName'),parameters('sapbitsContainerName'))]",
+      "name": "[format('{0}/default/{1}', parameters('sapMediaStorageAccountName'),parameters('sapMediaContainerName'))]",
       "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts', parameters('sapbitsStorageAccountName'))]"
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('sapMediaStorageAccountName'))]"
       ]
     },
     {
