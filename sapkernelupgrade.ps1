@@ -4,13 +4,13 @@ Param
     [String] $MSIApplicationID,
 
     [Parameter (Mandatory= $true)]
-    [String] $BitsStorageAccountRGName,
+    [String] $SapMediaStorageAccountRGName,
 
     [Parameter (Mandatory= $true)]
-    [String] $BitsStorageAccountName,
+    [String] $SapMediaStorageAccountName,
 
     [Parameter (Mandatory= $true)]
-    [String] $BitsStorageContainerName,
+    [String] $SapMediaStorageContainerName,
 
     [Parameter (Mandatory= $true)]
     [String] $SAPExeFiles,
@@ -42,7 +42,7 @@ $requesturisapops = "<Function URL for SAPKerUpgSAPOps>"
 "Fetching SAP Virtual Instances..."
 $allvis = Get-AzWorkloadsSapVirtualInstance
 "Getting SAS Credential..."
-$SASCredential = (Get-AzStorageAccountKey -ResourceGroupName $BitsStorageAccountRGName -AccountName $BitsStorageAccountName | Select-Object -First 1).Value
+$SASCredential = (Get-AzStorageAccountKey -ResourceGroupName $SapMediaStorageAccountRGName -AccountName $SapMediaStorageAccountName | Select-Object -First 1).Value
 ForEach ( $SAPSID in $SAPSIDs)
 {
     # Variables
@@ -105,7 +105,7 @@ ForEach ( $SAPSID in $SAPSIDs)
     }
 
     # Upload exe
-    $requesturiuploadexeinputobj = @{AccountName=$BitsStorageAccountName;Container=$BitsStorageContainerName;SASCred=$SASCredential;SAPExeFiles=$SAPExeFiles;SAPCarFile=$SAPCarFile;IpAddress=$VISmsIp;sshkey=$VISsshKey;SID=$VISName;AdminUserName=$VISDeploymentAdminUser}
+    $requesturiuploadexeinputobj = @{AccountName=$SapMediaStorageAccountName;Container=$SapMediaStorageContainerName;SASCred=$SASCredential;SAPExeFiles=$SAPExeFiles;SAPCarFile=$SAPCarFile;IpAddress=$VISmsIp;sshkey=$VISsshKey;SID=$VISName;AdminUserName=$VISDeploymentAdminUser}
     $requesturiuploadexeinputjson = $requesturiuploadexeinputobj | ConvertTo-Json
     "Uploading new SAR files to the SAP host"
     try {
